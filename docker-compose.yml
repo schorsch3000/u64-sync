@@ -1,7 +1,7 @@
 services:
   u64-sync:
-    build: .
-    container_name: u64-sync
+    # build: .
+    image: ghcr.io/schorsch3000/u64-sync:latest
     restart: unless-stopped
     # Run as the user that owns ./data on the host (scratch image: no chown at runtime).
     # Set U64_UID/U64_GID in .env if yours differ from 1000.
