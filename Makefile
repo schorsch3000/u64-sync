@@ -10,7 +10,7 @@ CONFIG  ?= config.yaml
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
 .DEFAULT_GOAL := help
-.PHONY: help build probe run test test-short race cover vet fmt fmt-check tidy tidy-check check ci \
+.PHONY: help build probe run test test-js test-short race cover vet fmt fmt-check tidy tidy-check check ci \
         cross dist docker docker-up docker-down clean
 
 help: ## show this help
@@ -27,6 +27,9 @@ run: build ## run with $(CONFIG) (default config.yaml)
 
 test: ## run all tests
 	go test ./...
+
+test-js: ## test the browser-side liveness script with node (needs node)
+	node internal/web/jstest/live.test.js
 
 test-short: ## run tests, skip the slow end-to-end test
 	go test $$(go list ./... | grep -v /e2e)
@@ -57,7 +60,7 @@ tidy: ## go mod tidy
 tidy-check: ## fail if go.mod / go.sum are not tidy
 	go mod tidy && git diff --exit-code go.mod go.sum
 
-check: fmt-check tidy-check vet race ## everything CI checks (formatting, tidy, vet, race tests)
+check: fmt-check tidy-check vet race test-js ## everything CI checks (formatting, tidy, vet, race tests)
 
 ci: check
 
