@@ -23,6 +23,11 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
       - run: CGO_ENABLED=0 go build ./...
+      - name: Cross-build windows and macOS
+        run: |
+          for t in windows/amd64 windows/arm64 darwin/arm64; do
+            GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go vet ./... && GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build -o /dev/null ./cmd/u64-sync
+          done
 
   docker:
     runs-on: ubuntu-latest

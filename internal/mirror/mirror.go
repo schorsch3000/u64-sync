@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -22,15 +21,15 @@ type Mirror struct {
 
 // CheckSameFS fails unless all dirs exist on one filesystem (needed for atomic rename and hardlinks).
 func CheckSameFS(dirs ...string) error {
-	var dev uint64
+	var first uint64
 	for i, d := range dirs {
-		var st syscall.Stat_t
-		if err := syscall.Stat(d, &st); err != nil {
+		id, err := fsID(d)
+		if err != nil {
 			return err
 		}
 		if i == 0 {
-			dev = uint64(st.Dev)
-		} else if uint64(st.Dev) != dev {
+			first = id
+		} else if id != first {
 			return fmt.Errorf("%s and %s are on different filesystems", dirs[0], d)
 		}
 	}
@@ -40,12 +39,14 @@ func CheckSameFS(dirs ...string) error {
 // Path maps a remote root and relative path to a local path inside Current.
 func (m *Mirror) Path(root, rel string) (string, error) {
 	full := strings.TrimPrefix(root, "/") + "/" + rel
-	for _, part := range strings.Split(full, "/") {
+	parts := strings.Split(full, "/")
+	for i, part := range parts {
 		if part == "" || part == "." || part == ".." || strings.ContainsRune(part, 0) {
 			return "", fmt.Errorf("unsafe path %q", full)
 		}
+		parts[i] = localName(part)
 	}
-	return filepath.Join(m.Current, filepath.FromSlash(full)), nil
+	return filepath.Join(append([]string{m.Current}, parts...)...), nil
 }
 
 // NewTemp creates a temp file in the tmp dir.

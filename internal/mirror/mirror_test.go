@@ -52,3 +52,22 @@ func TestInstallKeepsHardlinkedOldVersion(t *testing.T) {
 		t.Fatal("empty parents not pruned")
 	}
 }
+
+func TestEscapeWindows(t *testing.T) {
+	for in, want := range map[string]string{
+		"GAME.PRG":    "GAME.PRG",
+		"a:b?c*.d64":  "a%3Ab%3Fc%2A.d64",
+		"50%off":      "50%25off",
+		"name. ":      "name.%20",
+		"end.":        "end%2E",
+		"CON":         "%43ON",
+		"nul.txt":     "%6Eul.txt",
+		"COM1":        "%43OM1",
+		"console.prg": "console.prg",
+		"a\x01b":      "a%01b",
+	} {
+		if got := escapeWindows(in); got != want {
+			t.Errorf("escapeWindows(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -33,6 +33,11 @@ single filesystem.
 Env overrides: `U64_HOST`, `U64_FTP_PASSWORD`, `U64_REST_PASSWORD`, `U64_WEB_USER`,
 `U64_WEB_PASSWORD`, `U64_WEB_LISTEN`, `U64_DATA_DIR`.
 
+Windows: unzip the release, edit `config.yaml`, run `u64-sync.exe -config config.yaml`. Device file
+names Windows cannot store (`: ? * " < > |`, trailing dot/space, `CON`, `NUL`, ...) and `%` are saved
+as `%XX` (e.g. `a?b.prg` becomes `a%3Fb.prg`); the web UI shows the real names. Store the data on
+an NTFS volume (snapshots need hardlinks).
+
 `cmd/u64-probe` inspects a device (FTP features, listing format, connection limit).
 
 ## License
