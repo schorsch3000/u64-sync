@@ -82,7 +82,7 @@ progress { height: .7rem; margin: .4rem 0; }
 .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
 .controls form { margin: 0; }
 .controls button, .controls [role="button"] { width: auto; margin: 0; padding: .45rem 1rem; }
-.throttle-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0 1.25rem; max-width: 36rem; }
+.throttle-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
 .throttle button { width: auto; margin: 0; padding: .45rem 1.2rem; }
 
 /* tables */
@@ -101,6 +101,7 @@ td .icon { display: inline-block; width: 1.4rem; text-align: center; opacity: .8
 footer.site { margin: 2.5rem 0 1.5rem; color: var(--pico-muted-color); font-size: .8rem; text-align: center; }
 
 @media (max-width: 640px) {
+  .throttle-fields { grid-template-columns: 1fr; }
   .hide-sm { display: none; }
   .stat .value { font-size: 1.5rem; }
 }
