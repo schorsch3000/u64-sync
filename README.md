@@ -15,7 +15,7 @@ Never writes to the device.
 ## Run
 
     cp config.example.yaml config.yaml    # set device.host
-    go run ./cmd/u64-sync -config config.yaml
+    go run ./cmd/u64-sync          # reads ./config.yaml; use -config <file> for another one
 
 Docker:
 

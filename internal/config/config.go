@@ -143,7 +143,7 @@ func Load(file string) (Config, error) {
 
 func (c *Config) finish() error {
 	if c.Device.Host == "" {
-		return fmt.Errorf("device.host is required")
+		return fmt.Errorf("device.host is required (set it in config.yaml next to where you run the binary, pass -config <file>, or set U64_HOST)")
 	}
 	roots, err := NormalizeRoots(c.Device.Roots)
 	if err != nil {

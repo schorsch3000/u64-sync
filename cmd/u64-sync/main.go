@@ -31,9 +31,16 @@ import (
 var version = "dev"
 
 func main() {
-	cfgFile := flag.String("config", "", "config file (YAML); defaults plus U64_HOST env if empty")
+	cfgFile := flag.String("config", "", "config file (YAML); default ./config.yaml if it exists; -config \"\" uses defaults plus env only")
 	health := flag.Bool("healthcheck", false, "probe the running service's /healthz and exit (for container health checks)")
 	flag.Parse()
+	explicit := false
+	flag.Visit(func(f *flag.Flag) { explicit = explicit || f.Name == "config" })
+	if !explicit {
+		if _, err := os.Stat("config.yaml"); err == nil {
+			*cfgFile = "config.yaml"
+		}
+	}
 	if *health {
 		os.Exit(healthcheck(*cfgFile))
 	}
