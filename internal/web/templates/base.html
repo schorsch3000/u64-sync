@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
+<meta name="u64-instance" content="{{instance}}">
 <title>U64 Sync</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <script src="/static/theme.js"></script>
@@ -11,6 +12,7 @@
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/htmx.min.js"></script>
 <script src="/static/app.js" defer></script>
+<script src="/static/live.js" defer></script>
 </head>
 <body>
 <header class="topbar">
@@ -35,6 +37,14 @@
   </div>
 </header>
 <main class="container">{{template "content" .}}</main>
+<dialog id="offline-dialog" aria-labelledby="offline-title">
+  <article>
+    <header><strong id="offline-title">Connection lost</strong></header>
+    <p>U64 Sync is not reachable. It may be restarting or being updated.</p>
+    <p aria-busy="true" class="muted"><span data-status>Waiting for the server…</span></p>
+    <small class="muted">This page reloads by itself as soon as the server is back.</small>
+  </article>
+</dialog>
 <footer class="site container">U64 Sync · read-only mirror of an Ultimate64</footer>
 </body>
 </html>{{end}}

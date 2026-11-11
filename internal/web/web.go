@@ -31,6 +31,10 @@ import (
 	"github.com/schorsch3000/u64-sync/internal/verify"
 )
 
+// Instance identifies this running process. It changes on every restart, so a
+// browser that sees a different value knows the server was redeployed.
+var Instance = strconv.FormatInt(time.Now().UnixNano(), 36)
+
 //go:embed static templates
 var assets embed.FS
 
@@ -174,7 +178,8 @@ var funcs = template.FuncMap{
 		}
 		return time.Unix(unix, 0).Format("15:04:05")
 	},
-	"str": func(v any) string { return fmt.Sprint(v) },
+	"str":      func(v any) string { return fmt.Sprint(v) },
+	"instance": func() string { return Instance },
 }
 
 func (s *Server) load() error {
@@ -208,7 +213,13 @@ func (s *Server) Handler() (http.Handler, error) {
 	}
 	mux := http.NewServeMux()
 	top := http.NewServeMux()
-	top.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "ok\n") })
+	top.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		// Also the browser's liveness probe: X-Instance proves the answer comes from this
+		// app (not a proxy error page) and tells the page whether it is stale.
+		w.Header().Set("X-Instance", Instance)
+		w.Header().Set("Cache-Control", "no-store")
+		io.WriteString(w, "ok\n")
+	})
 	top.Handle("/", s.auth(mux))
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))

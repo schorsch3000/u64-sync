@@ -101,7 +101,7 @@ func TestPagesRender(t *testing.T) {
 		code int
 		want []string
 	}{
-		{"/", 200, []string{"</html>", "app.css", "theme.js", "theme-panel", "hx-get=\"/ui/status\""}},
+		{"/", 200, []string{"</html>", "app.css", "theme.js", "theme-panel", "hx-get=\"/ui/status\"", "live.js", `id="offline-dialog"`, `name="u64-instance" content="` + Instance + `"`}},
 		{"/ui/status", 200, []string{"Failing files", "boom &lt;b&gt;x&lt;/b&gt;", "Controls", "Backed up"}},
 		{"/files/", 200, []string{"SD", "Flash", "Download as zip"}},
 		{"/files/SD", 200, []string{"Games", "ok.txt", "deleted on device", `id="filter"`}},
@@ -114,6 +114,7 @@ func TestPagesRender(t *testing.T) {
 		{"/static/pico.jade.min.css", 200, []string{"pico-primary-background"}},
 		{"/favicon.ico", 200, []string{"<svg"}},
 		{"/healthz", 200, []string{"ok"}},
+		{"/static/live.js", 200, []string{"/healthz", "X-Instance"}},
 		{"/dl/SD/ok.txt", 200, []string{"hello"}},
 		{"/dl/SD/missing.txt", 404, nil},
 		{"/dl/SD", 404, nil},
@@ -202,5 +203,19 @@ func TestAccentStylesheetsAreEmbedded(t *testing.T) {
 	files, _ := fs.Glob(assets, "static/pico.*.min.css")
 	if len(files) != len(names) {
 		t.Errorf("%d stylesheets embedded for %d accents", len(files), len(names))
+	}
+}
+
+// The browser compares X-Instance from /healthz with the instance embedded in the page:
+// a mismatch means the server was redeployed and the page is stale.
+func TestInstanceHeaderMatchesPage(t *testing.T) {
+	h, _, _ := testServer(t)
+	_, page, _ := get(h, "GET", "/")
+	code, _, hdr := get(h, "GET", "/healthz")
+	if code != 200 || hdr.Get("X-Instance") == "" || hdr.Get("Cache-Control") != "no-store" {
+		t.Fatalf("healthz headers: %d %v", code, hdr)
+	}
+	if !strings.Contains(page, `content="`+hdr.Get("X-Instance")+`"`) {
+		t.Fatal("page does not embed the instance that /healthz reports")
 	}
 }
