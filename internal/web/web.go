@@ -302,7 +302,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		okU := subtle.ConstantTimeCompare(gotU[:], wantU[:])
 		okP := subtle.ConstantTimeCompare(gotP[:], wantP[:])
 		if !ok || okU&okP != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="u64-sync", charset="UTF-8"`)
+			w.Header().Set("WWW-Authenticate", `Basic realm="U64 Sync", charset="UTF-8"`)
 			http.Error(w, "authentication required", http.StatusUnauthorized)
 			return
 		}

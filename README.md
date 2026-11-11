@@ -1,6 +1,6 @@
-# u64-sync
+# U64 Sync
 
-Slow, throttled, read-only mirror of an Ultimate64's SD card over its FTP server.
+U64 Sync is a slow, throttled, read-only mirror of an Ultimate64's SD card over its FTP server.
 Never writes to the device.
 
 - **Sync:** a crawler inventories the device (`MLSD`, size + mtime), a copier downloads new and
