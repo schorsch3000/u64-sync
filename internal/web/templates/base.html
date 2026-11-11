@@ -6,7 +6,8 @@
 <meta name="color-scheme" content="light dark">
 <title>u64-sync</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="stylesheet" href="/static/pico.min.css">
+<script src="/static/theme.js"></script>
+<noscript><link rel="stylesheet" href="/static/pico.jade.min.css"></noscript>
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/htmx.min.js"></script>
 <script src="/static/app.js" defer></script>
@@ -16,7 +17,20 @@
   <div class="container">
     <nav>
       <ul><li><a class="brand" href="/"><img src="/static/favicon.svg" alt="">u64-sync</a></li></ul>
-      <ul><li><a href="/">Dashboard</a></li><li><a href="/files/">Files</a></li></ul>
+      <ul>
+        <li><a href="/">Dashboard</a></li><li><a href="/files/">Files</a></li>
+        <li>
+          <details class="theme-picker">
+            <summary aria-label="Theme" title="Theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></summary>
+            <div id="theme-panel" class="panel">
+              <p class="label">Mode</p>
+              <div role="group" data-modes></div>
+              <p class="label">Accent color</p>
+              <div class="swatches" data-swatches></div>
+            </div>
+          </details>
+        </li>
+      </ul>
     </nav>
   </div>
 </header>

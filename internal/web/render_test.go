@@ -5,10 +5,12 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -99,7 +101,7 @@ func TestPagesRender(t *testing.T) {
 		code int
 		want []string
 	}{
-		{"/", 200, []string{"</html>", "app.css", "hx-get=\"/ui/status\""}},
+		{"/", 200, []string{"</html>", "app.css", "theme.js", "theme-panel", "hx-get=\"/ui/status\""}},
 		{"/ui/status", 200, []string{"Failing files", "boom &lt;b&gt;x&lt;/b&gt;", "Controls", "Backed up"}},
 		{"/files/", 200, []string{"SD", "Flash", "Download as zip"}},
 		{"/files/SD", 200, []string{"Games", "ok.txt", "deleted on device", `id="filter"`}},
@@ -107,7 +109,9 @@ func TestPagesRender(t *testing.T) {
 		{"/files/SD/nope", 404, nil},
 		{"/files/Nope", 404, nil},
 		{"/static/app.css", 200, []string{".badge"}},
-		{"/static/app.js", 200, []string{"filter"}},
+		{"/static/app.js", 200, []string{"filter", "theme-panel"}},
+		{"/static/theme.js", 200, []string{`DEFAULT_ACCENT = "jade"`, `DEFAULT_MODE = "auto"`}},
+		{"/static/pico.jade.min.css", 200, []string{"pico-primary-background"}},
 		{"/favicon.ico", 200, []string{"<svg"}},
 		{"/healthz", 200, []string{"ok"}},
 		{"/dl/SD/ok.txt", 200, []string{"hello"}},
@@ -174,5 +178,29 @@ func TestSpeedBlockRenders(t *testing.T) {
 	s.render(w, "index", "status", view)
 	if !strings.Contains(w.Body.String(), "No data yet") {
 		t.Error("empty state missing")
+	}
+}
+
+// Every accent offered by the picker must have its stylesheet embedded, and the default must be jade.
+func TestAccentStylesheetsAreEmbedded(t *testing.T) {
+	js, err := assets.ReadFile("static/theme.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, m := range regexp.MustCompile(`\["([a-z]+)", "#[0-9a-f]{6}"\]`).FindAllStringSubmatch(string(js), -1) {
+		names = append(names, m[1])
+	}
+	if len(names) != 20 {
+		t.Fatalf("expected Pico's 20 colors, got %d: %v", len(names), names)
+	}
+	for _, n := range names {
+		if _, err := assets.ReadFile("static/pico." + n + ".min.css"); err != nil {
+			t.Errorf("accent %q: %v", n, err)
+		}
+	}
+	files, _ := fs.Glob(assets, "static/pico.*.min.css")
+	if len(files) != len(names) {
+		t.Errorf("%d stylesheets embedded for %d accents", len(files), len(names))
 	}
 }
