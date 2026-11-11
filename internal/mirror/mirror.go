@@ -90,7 +90,7 @@ func (m *Mirror) Install(tmp *os.File, target string, mtime time.Time) error {
 		m.Mu.Unlock()
 		return fail(err)
 	}
-	err := os.Rename(name, target)
+	err := replaceFile(name, target, m.Tmp)
 	m.Mu.Unlock()
 	if err != nil {
 		return fail(err)
