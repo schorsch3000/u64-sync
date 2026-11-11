@@ -1,0 +1,7 @@
+.git
+.idea
+.az
+bin
+data
+config.yaml
+*.md

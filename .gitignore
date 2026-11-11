@@ -1,0 +1,6 @@
+/data/
+/bin/
+.idea/
+.az/
+.env
+/config.yaml

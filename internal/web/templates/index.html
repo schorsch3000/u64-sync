@@ -1,0 +1,5 @@
+{{define "content"}}
+<div id="status" hx-get="/ui/status" hx-trigger="every 3s [!document.activeElement || document.activeElement.tagName!='INPUT']" hx-swap="innerHTML">
+{{template "status" .}}
+</div>
+{{end}}

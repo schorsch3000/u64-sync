@@ -1,0 +1,22 @@
+services:
+  u64-sync:
+    build: .
+    container_name: u64-sync
+    restart: unless-stopped
+    # Run as the user that owns ./data on the host (scratch image: no chown at runtime).
+    # Set U64_UID/U64_GID in .env if yours differ from 1000.
+    user: "${U64_UID:-1000}:${U64_GID:-1000}"
+    ports:
+      - "8064:8064"
+    volumes:
+      # current/, snapshots/, tmp/ and the database must stay below this one directory
+      # (atomic rename and hardlinks need a single filesystem).
+      # Create it first as your own user: `mkdir -p data`. If Docker creates it, it is root-owned
+      # and the container cannot write to it.
+      - ./data:/data
+      - ./config.yaml:/config.yaml:ro
+    environment:
+      # Secrets can also live in config.yaml; env wins. Set them in a .env file or your shell.
+      U64_WEB_PASSWORD: ${U64_WEB_PASSWORD:-}
+      U64_FTP_PASSWORD: ${U64_FTP_PASSWORD:-}
+      U64_REST_PASSWORD: ${U64_REST_PASSWORD:-}

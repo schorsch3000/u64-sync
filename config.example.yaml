@@ -1,0 +1,38 @@
+device:
+  host: 10.0.100.8
+  ftp_port: 21
+  ftp_user: anonymous
+  ftp_password: ""        # or env U64_FTP_PASSWORD
+  rest_password: ""       # or env U64_REST_PASSWORD
+  roots: [/SD, /Flash]    # remote folders to sync; "/" is not allowed
+
+storage:
+  data_dir: ./data        # current/, snapshots/, tmp/ and the DB live here
+  # current_dir, snapshot_dir, tmp_dir, db: override individually.
+  # current_dir, tmp_dir and snapshot_dir must be on ONE filesystem (atomic rename, hardlinks).
+
+sync:
+  crawl_interval: 6h
+  delete_grace: 168h      # keep local copy this long after a file vanished on the device
+  delete_brake_pct: 20    # refuse mass deletion when more than this % of a root vanished...
+  delete_brake_min: 20    # ...and at least this many files (approve in the web UI)
+  excludes: []            # path.Match globs, e.g. ["*.tmp", "Games/HVSC*"]
+
+throttle:                 # runtime changes in the UI override these
+  bytes_per_second: 204800
+  command_delay: 200ms
+
+snapshots:
+  enabled: true
+  interval: 24h           # at most one snapshot per interval, taken after a complete sync
+  keep: {last: 1, daily: 0, weekly: 0, monthly: 0}
+
+verify:
+  enabled: true
+  interval: 720h          # re-hash every local file at least this often (bit-rot check)
+  bytes_per_second: 20971520   # local disk read rate
+
+web:
+  listen: 127.0.0.1:8064
+  user: admin             # env U64_WEB_USER
+  password: ""            # basic auth is on when set; env U64_WEB_PASSWORD. Always use it when listening beyond localhost.

@@ -1,0 +1,24 @@
+{{define "content"}}
+{{if .IsRoot}}
+<h3>Files</h3>
+<table><thead><tr><th>Root</th><th class="num">Files</th><th class="num">Size</th><th class="num">Pending</th><th></th></tr></thead><tbody>
+{{range .Roots}}<tr><td><a href="/files/{{.Name}}">{{.Name}}/</a></td><td class="num">{{.Files}}</td><td class="num">{{bytes .Bytes}}</td><td class="num">{{.Pending}}</td><td class="num"><a href="/zip/{{.Name}}">zip</a></td></tr>{{end}}
+</tbody></table>
+{{else}}
+<nav aria-label="breadcrumb"><ul>{{range .Crumbs}}<li><a href="{{.URL}}">{{.Name}}</a></li>{{end}}</ul></nav>
+<p><a href="{{.ZipURL}}">Download this folder as zip</a></p>
+<table><thead><tr><th>Name</th><th class="num">Size</th><th class="num">Modified</th><th>State</th></tr></thead><tbody>
+{{range .Entries}}<tr>
+  <td>{{if .IsDir}}<a href="{{$.Base}}{{.Name}}">{{.Name}}/</a>{{else}}<a href="/dl/{{slice $.Base 7}}{{.Name}}">{{.Name}}</a>{{end}}</td>
+  <td class="num">{{bytes .Size}}{{if .IsDir}} <small class="muted">({{.Files}} files)</small>{{end}}</td>
+  <td class="num">{{if .MTime}}{{date .MTime}}{{end}}</td>
+  <td>
+    {{if .Failing}}<span class="bad">failing{{if .IsDir}} ({{.Failing}}){{end}}</span>
+    {{else if .Pending}}<span class="muted">pending{{if .IsDir}} ({{.Pending}}){{end}}</span>
+    {{else if .Deleted}}<span class="muted">deleted on device{{if .IsDir}} ({{.Deleted}}){{end}}</span>
+    {{else}}<span class="ok">backed up</span>{{end}}
+    {{if .Err}}<br><small class="bad">{{.Err}}</small>{{end}}
+  </td></tr>{{end}}
+</tbody></table>
+{{end}}
+{{end}}

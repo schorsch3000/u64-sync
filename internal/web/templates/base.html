@@ -1,0 +1,25 @@
+{{define "base"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>u64-sync</title>
+<link rel="stylesheet" href="/static/pico.min.css">
+<script src="/static/htmx.min.js"></script>
+<style>
+  .ok{color:var(--pico-ins-color)} .bad{color:var(--pico-del-color)} .muted{color:var(--pico-muted-color)}
+  td.num,th.num{text-align:right;white-space:nowrap} .actions form{display:inline-block;margin:0 .5rem .5rem 0}
+  .actions button,.actions input[type=submit]{width:auto;margin:0} nav ul li a[aria-current]{font-weight:bold}
+  details.err{margin:0} progress{margin:0}
+</style>
+</head>
+<body>
+<header class="container">
+  <nav>
+    <ul><li><strong>u64-sync</strong></li></ul>
+    <ul><li><a href="/">Dashboard</a></li><li><a href="/files/">Files</a></li></ul>
+  </nav>
+</header>
+<main class="container">{{template "content" .}}</main>
+</body>
+</html>{{end}}
