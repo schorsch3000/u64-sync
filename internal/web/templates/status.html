@@ -96,12 +96,17 @@
     </form>
   </div>
   <form class="throttle" hx-post="/ui/throttle" hx-target="#status" hx-swap="innerHTML">
-    <fieldset role="group">
-      <input type="number" name="kbps" min="0" value="{{.Throttle.KBps}}" aria-label="KiB per second">
-      <input type="number" name="delay_ms" min="0" max="60000" value="{{.Throttle.DelayMS}}" aria-label="delay between commands in ms">
-      <button>Apply</button>
-    </fieldset>
-    <small class="muted">Left: KiB/s (0 = unlimited) · right: milliseconds between FTP commands</small>
+    <div class="throttle-fields">
+      <label>Speed limit (KiB/s)
+        <input type="number" name="kbps" min="0" value="{{.Throttle.KBps}}">
+        <small>0 = unlimited</small>
+      </label>
+      <label>Delay between FTP commands (ms)
+        <input type="number" name="delay_ms" min="0" max="60000" value="{{.Throttle.DelayMS}}">
+        <small>keeps the device responsive</small>
+      </label>
+    </div>
+    <button>Apply</button>
   </form>
 </article>
 {{end}}

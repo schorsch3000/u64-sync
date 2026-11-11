@@ -82,8 +82,8 @@ progress { height: .7rem; margin: .4rem 0; }
 .controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
 .controls form { margin: 0; }
 .controls button, .controls [role="button"] { width: auto; margin: 0; padding: .45rem 1rem; }
-.throttle fieldset { margin: 0 0 .3rem; max-width: 26rem; }
-.throttle input { margin: 0; }
+.throttle-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0 1.25rem; max-width: 36rem; }
+.throttle button { width: auto; margin: 0; padding: .45rem 1.2rem; }
 
 /* tables */
 table { font-size: .92rem; }
