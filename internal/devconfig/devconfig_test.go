@@ -87,39 +87,22 @@ func newAnswers() *answers {
 	}
 }
 
-func TestFetchBuildsOrderedDocument(t *testing.T) {
-	s, _ := setup(t, newAnswers())
+func TestFetchBuildsCfg(t *testing.T) {
+	a := newAnswers()
+	a.items["Audio Mixer"] = `{ "Vol UltiSid 1" : " 0 dB", "Mouse Sensitivity" : 8, "Pan UltiSid 1" : "Center" }`
+	s, _ := setup(t, a)
 	data, n, err := s.Fetch(context.Background())
 	if err != nil || n != 3 {
 		t.Fatalf("n=%d err=%v", n, err)
 	}
-	var doc struct {
-		Device     map[string]any            `json:"device"`
-		Categories map[string]map[string]any `json:"categories"`
-	}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		t.Fatalf("not valid JSON: %v\n%s", err, data)
-	}
-	if doc.Device["product"] != "Ultimate 64-II" || doc.Device["errors"] != nil {
-		t.Fatalf("device: %v", doc.Device)
-	}
-	if doc.Categories["Network Settings"]["Host Name"] != "u64" || doc.Categories["SID Socket 1: PDsid"]["Volume"] != "+1 dB" {
-		t.Fatalf("categories: %v", doc.Categories)
-	}
-	text := string(data)
-	// the device's order is kept, not alphabetical
-	if !(strings.Index(text, `"Network Settings"`) < strings.Index(text, `"SID Socket 1: PDsid"`) &&
-		strings.Index(text, `"SID Socket 1: PDsid"`) < strings.Index(text, `"Audio Mixer"`)) {
-		t.Fatalf("category order lost:\n%s", text)
-	}
-	if strings.Index(text, `"Vol UltiSid 1"`) > strings.Index(text, `"Pan UltiSid 1"`) {
-		t.Fatal("item order lost")
-	}
-	if !strings.HasSuffix(text, "}\n") {
-		t.Fatal("no trailing newline")
+	want := "[Network Settings]\nHost Name=u64\nNetwork Password=s3cret\nTime Server 1=time.windows.com\n\n" +
+		"[SID Socket 1: PDsid]\nVolume=+1 dB\n\n" +
+		"[Audio Mixer]\nVol UltiSid 1= 0 dB\nMouse Sensitivity=8\nPan UltiSid 1=Center\n\n"
+	if string(data) != want {
+		t.Fatalf("got:\n%q\nwant:\n%q", data, want)
 	}
 	again, _, _ := s.Fetch(context.Background())
-	if string(again) != text {
+	if string(again) != string(data) {
 		t.Fatal("output is not deterministic")
 	}
 }
@@ -127,7 +110,7 @@ func TestFetchBuildsOrderedDocument(t *testing.T) {
 func TestWriteOnlyWhenChangedAndOwnerOnly(t *testing.T) {
 	a := newAnswers()
 	s, mir := setup(t, a)
-	target := filepath.Join(mir.Current, "u64-config.json")
+	target := filepath.Join(mir.Current, "u64-config.cfg")
 
 	changed, n, err := s.Sync(context.Background())
 	if err != nil || !changed || n != 3 {
@@ -137,7 +120,7 @@ func TestWriteOnlyWhenChangedAndOwnerOnly(t *testing.T) {
 	if runtime.GOOS != "windows" && st1.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v: the file can hold passwords", st1.Mode().Perm())
 	}
-	if b, _ := os.ReadFile(target); !strings.Contains(string(b), `"Host Name": "u64"`) {
+	if b, _ := os.ReadFile(target); !strings.Contains(string(b), "Host Name=u64") {
 		t.Fatalf("content:\n%s", b)
 	}
 	if ents, _ := os.ReadDir(mir.Tmp); len(ents) != 0 {
@@ -155,7 +138,7 @@ func TestWriteOnlyWhenChangedAndOwnerOnly(t *testing.T) {
 	}
 
 	// a snapshot (hardlink) must keep the old version when the config changes
-	link := filepath.Join(t.TempDir(), "snap.json")
+	link := filepath.Join(t.TempDir(), "snap.cfg")
 	if err := os.Link(target, link); err != nil {
 		t.Skipf("no hardlinks here: %v", err)
 	}
@@ -164,10 +147,10 @@ func TestWriteOnlyWhenChangedAndOwnerOnly(t *testing.T) {
 	if err != nil || !changed {
 		t.Fatalf("changed config not written: %v %v", changed, err)
 	}
-	if b, _ := os.ReadFile(link); !strings.Contains(string(b), `"u64"`) {
+	if b, _ := os.ReadFile(link); !strings.Contains(string(b), "Host Name=u64") {
 		t.Fatal("snapshot copy was modified in place")
 	}
-	if b, _ := os.ReadFile(target); !strings.Contains(string(b), `"renamed"`) {
+	if b, _ := os.ReadFile(target); !strings.Contains(string(b), "Host Name=renamed") {
 		t.Fatal("new config not in place")
 	}
 }
@@ -179,7 +162,7 @@ func TestFailureKeepsOldFile(t *testing.T) {
 	if _, _, err := s.Sync(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(mir.Current, "u64-config.json")
+	target := filepath.Join(mir.Current, "u64-config.cfg")
 	before, _ := os.ReadFile(target)
 
 	a.broken.Store("Audio Mixer")

@@ -30,7 +30,7 @@
     <dt>Hostname</dt><dd>{{index . "hostname"}}</dd>
     {{end}}
     <dt>State</dt><dd>{{if .Device.Up}}up{{else}}down{{end}} since {{ago .Device.Since}}</dd>
-    {{if .DevConfig.Enabled}}<dt>Config</dt><dd>{{if .DevConfig.LastError}}<span class="bad">{{.DevConfig.LastError}}</span>{{else if .DevConfig.Categories}}saved {{ago .DevConfig.LastOK}} <small class="muted">· {{.DevConfig.Categories}} categories → <code>{{.DevConfig.File}}</code></small>{{else}}<span class="muted">not read yet</span>{{end}}</dd>{{end}}
+    {{if .DevConfig.Enabled}}<dt>Config</dt><dd>{{if .DevConfig.LastError}}<span class="bad">{{.DevConfig.LastError}}</span>{{else if .DevConfig.Categories}}saved {{ago .DevConfig.LastOK}} <small class="muted">· {{.DevConfig.Categories}} categories · <a href="/devconfig">download <code>{{.DevConfig.File}}</code></a></small>{{else}}<span class="muted">not read yet</span>{{end}}</dd>{{end}}
     <dt>Syncing</dt><dd>{{range $i, $r := .Roots}}{{if $i}} {{end}}<code>{{$r}}</code>{{end}}</dd>
   </dl>
 </article>

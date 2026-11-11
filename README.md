@@ -11,7 +11,7 @@ Never writes to the device.
 - **Verification:** local files are re-hashed against the sha256 stored at download; bad or missing
   copies are downloaded again.
 - **Device configuration (optional):** with `device_config.enabled`, the device's own settings are
-  read from its REST API and saved as `u64-config.json` in the root of the mirror (snapshots
+  read from its REST API and saved as `u64-config.cfg` (loadable on the device, downloadable in the web UI) in the root of the mirror (snapshots
   include it; it is rewritten only when something changed). It can contain network and WiFi
   passwords, so it is written owner-only and the option is off by default.
 - **Web UI:** dashboard, file browser, file download, folder zip. Optional basic auth.

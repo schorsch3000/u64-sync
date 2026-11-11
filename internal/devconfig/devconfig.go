@@ -1,5 +1,6 @@
 // Package devconfig saves the device's own configuration, read from its REST
-// API, as one JSON file in the root of the local mirror. Snapshots pick the
+// API, as one .cfg file (the Ultimate's INI-style format, loadable on the device)
+// in the root of the local mirror. Snapshots pick the
 // file up like any other, so the configuration is versioned with the files.
 package devconfig
 
@@ -44,6 +45,9 @@ type Status struct {
 func New(cfg config.DeviceConfig, dev *device.Monitor, mir *mirror.Mirror, th *throttle.Throttle) *Syncer {
 	return &Syncer{cfg: cfg, dev: dev, mir: mir, th: th, status: Status{Enabled: cfg.Enabled, File: cfg.File}}
 }
+
+// Path is where the saved configuration lives.
+func (s *Syncer) Path() string { return filepath.Join(s.mir.Current, s.cfg.File) }
 
 func (s *Syncer) Status() Status {
 	s.mu.Lock()
@@ -108,9 +112,10 @@ type listing struct {
 	Errors     []string `json:"errors"`
 }
 
-// Fetch builds the JSON document: device info plus every configuration category,
-// in the device's own order. It contains no timestamp, so an unchanged
-// configuration yields byte-identical output.
+// Fetch builds the configuration in the Ultimate's own .cfg format (INI style:
+// "[Category]" headers, "Key=Value" lines), the format its "Save to file" writes and
+// "Load from file" reads. Categories and items keep the device's order. There is no
+// timestamp, so an unchanged configuration yields byte-identical output.
 func (s *Syncer) Fetch(ctx context.Context) ([]byte, int, error) {
 	get := func(path string) ([]byte, error) {
 		if err := s.th.Command(ctx); err != nil {
@@ -134,38 +139,16 @@ func (s *Syncer) Fetch(ctx context.Context) ([]byte, int, error) {
 	}
 
 	var out bytes.Buffer
-	out.WriteString(`{"device":`)
-	if info, err := get("/v1/info"); err == nil && json.Valid(info) {
-		out.Write(stripErrors(info))
-	} else {
-		out.WriteString("null")
-	}
-	out.WriteString(`,"categories":{`)
-	for i, cat := range l.Categories {
+	for _, cat := range l.Categories {
 		raw, err := get("/v1/configs/" + escapeSegment(cat))
 		if err != nil {
 			return nil, 0, fmt.Errorf("category %q: %w", cat, err)
 		}
-		inner, err := category(raw, cat)
-		if err != nil {
+		if err := writeSection(&out, raw, cat); err != nil {
 			return nil, 0, fmt.Errorf("category %q: %w", cat, err)
 		}
-		if i > 0 {
-			out.WriteByte(',')
-		}
-		name, _ := json.Marshal(cat)
-		out.Write(name)
-		out.WriteByte(':')
-		out.Write(inner)
 	}
-	out.WriteString("}}")
-
-	var pretty bytes.Buffer
-	if err := json.Indent(&pretty, out.Bytes(), "", "  "); err != nil {
-		return nil, 0, fmt.Errorf("assembling config document: %w", err)
-	}
-	pretty.WriteByte('\n')
-	return pretty.Bytes(), len(l.Categories), nil
+	return out.Bytes(), len(l.Categories), nil
 }
 
 // escapeSegment percent-encodes everything but unreserved characters. The device
@@ -187,44 +170,55 @@ func escapeSegment(s string) string {
 	return b.String()
 }
 
-// category extracts the settings object of one category from the device's answer
-// {"<category>": {...}, "errors": []}, keeping the device's item order.
-func category(raw []byte, name string) (json.RawMessage, error) {
+// writeSection appends one category from the device's answer
+// {"<category>": {...}, "errors": []} as an INI section. Values are written as the
+// device reports them (the REST API keeps the leading space of "Vol Master= 0 dB").
+func writeSection(out *bytes.Buffer, raw []byte, name string) error {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &m); err != nil {
-		return nil, err
+		return err
 	}
 	var errs []string
 	json.Unmarshal(m["errors"], &errs)
 	if len(errs) > 0 {
-		return nil, fmt.Errorf("device reports %v", errs)
+		return fmt.Errorf("device reports %v", errs)
 	}
 	inner, ok := m[name]
 	if !ok {
-		return nil, errors.New("not in the answer")
+		return errors.New("not in the answer")
 	}
-	return inner, nil
-}
-
-// stripErrors drops the trailing "errors" member the REST API adds to every answer.
-func stripErrors(raw []byte) []byte {
-	var m map[string]json.RawMessage
-	if json.Unmarshal(raw, &m) != nil {
-		return raw
+	dec := json.NewDecoder(bytes.NewReader(inner))
+	if t, err := dec.Token(); err != nil || t != json.Delim('{') {
+		return errors.New("settings are not an object")
 	}
-	delete(m, "errors")
-	// re-marshalling sorts keys, which is fine: stable output is what matters here
-	b, err := json.Marshal(m)
-	if err != nil {
-		return raw
+	fmt.Fprintf(out, "[%s]\n", name)
+	for dec.More() {
+		kt, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		key, _ := kt.(string)
+		var v json.RawMessage
+		if err := dec.Decode(&v); err != nil {
+			return err
+		}
+		var val string
+		if json.Unmarshal(v, &val) != nil {
+			val = string(v) // number or bool: keep the literal
+		}
+		if strings.ContainsAny(key+val, "\r\n") {
+			return fmt.Errorf("item %q contains a line break", key)
+		}
+		fmt.Fprintf(out, "%s=%s\n", key, val)
 	}
-	return b
+	out.WriteByte('\n')
+	return nil
 }
 
 // write replaces the file atomically, only if the content differs. An unchanged
 // file keeps its inode, so snapshots keep sharing it.
 func (s *Syncer) write(data []byte) (bool, error) {
-	target := filepath.Join(s.mir.Current, s.cfg.File)
+	target := s.Path()
 	if old, err := os.ReadFile(target); err == nil && bytes.Equal(old, data) {
 		return false, nil
 	}

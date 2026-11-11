@@ -284,6 +284,7 @@ func (s *Server) Handler() (http.Handler, error) {
 
 	mux.HandleFunc("GET /files/{path...}", s.files)
 	mux.HandleFunc("GET /dl/{path...}", s.download)
+	mux.HandleFunc("GET /devconfig", s.devConfig)
 	mux.HandleFunc("GET /zip/{path...}", s.zip)
 
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, r *http.Request) {
@@ -421,6 +422,29 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(p)))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	http.ServeContent(w, r, filepath.Base(p), st.ModTime(), f)
+}
+
+// devConfig serves the saved device configuration (.cfg, loadable on the device).
+func (s *Server) devConfig(w http.ResponseWriter, r *http.Request) {
+	if s.DevConfig == nil || !s.DevConfig.Status().Enabled {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := mirror.OpenShared(s.DevConfig.Path())
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil || !st.Mode().IsRegular() {
+		http.NotFound(w, r)
+		return
+	}
+	name := filepath.Base(s.DevConfig.Path())
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name))
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.ServeContent(w, r, name, st.ModTime(), f)
 }
 
 // zip streams a directory (or a whole root) of the mirror as a zip archive.

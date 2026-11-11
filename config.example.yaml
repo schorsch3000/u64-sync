@@ -28,9 +28,9 @@ snapshots:
   interval: 24h           # at most one snapshot per interval, taken after a complete sync
   keep: {last: 1, daily: 0, weekly: 0, monthly: 0}
 
-device_config:            # also save the device's own configuration (REST API) as JSON in the mirror root
+device_config:            # also save the device's own configuration (REST API) as a .cfg file in the mirror root
   enabled: false          # off by default: the file contains network/WiFi passwords (written owner-only)
-  file: u64-config.json   # name inside data/current/, included in snapshots
+  file: u64-config.cfg    # name inside data/current/, included in snapshots
   interval: 1h
 
 verify:

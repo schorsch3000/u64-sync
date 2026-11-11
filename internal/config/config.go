@@ -66,7 +66,7 @@ type Snapshots struct {
 	} `yaml:"keep"`
 }
 
-// DeviceConfig saves the device's own configuration (REST API) as a JSON file in the
+// DeviceConfig saves the device's own configuration (REST API) as a .cfg file (the device's own format) in the
 // root of the local mirror. It can contain secrets (network and WiFi passwords), so the
 // file is readable by its owner only and the option is off by default.
 type DeviceConfig struct {
@@ -105,7 +105,7 @@ func Default() Config {
 	c.Snapshots.Enabled = true
 	c.Snapshots.Interval = 24 * time.Hour
 	c.Snapshots.Keep.Last = 1
-	c.DeviceConfig.File = "u64-config.json"
+	c.DeviceConfig.File = "u64-config.cfg"
 	c.DeviceConfig.Interval = time.Hour
 	c.Verify.Enabled = true
 	c.Verify.Interval = 30 * 24 * time.Hour
