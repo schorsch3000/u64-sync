@@ -84,6 +84,24 @@ func (s *Server) status() status {
 	}
 }
 
+func agoFn(t time.Time) string {
+	if t.IsZero() || t.Year() < 2000 {
+		return "never"
+	}
+	d := time.Since(t).Round(time.Second)
+	switch {
+	case d < 0:
+		return "just now"
+	case d < time.Minute:
+		return d.String() + " ago"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+}
+
 var funcs = template.FuncMap{
 	"bytes": func(n int64) string {
 		const u = "KMGT"
@@ -97,20 +115,20 @@ var funcs = template.FuncMap{
 		}
 		return fmt.Sprintf("%.1f %ciB", f, u[i])
 	},
-	"ago": func(t time.Time) string {
-		if t.IsZero() || t.Year() < 2000 {
-			return "never"
+	"ago": agoFn,
+	"sub": func(a, b int) int { return a - b },
+	"pct": func(a, b int) int {
+		if b <= 0 {
+			return 0
 		}
-		d := time.Since(t).Round(time.Second)
-		switch {
-		case d < time.Minute:
-			return d.String() + " ago"
-		case d < time.Hour:
-			return fmt.Sprintf("%dm ago", int(d.Minutes()))
-		case d < 48*time.Hour:
-			return fmt.Sprintf("%dh ago", int(d.Hours()))
+		return a * 100 / b
+	},
+	"agostr": func(rfc3339 string) string {
+		t, err := time.Parse(time.RFC3339, rfc3339)
+		if err != nil {
+			return rfc3339
 		}
-		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+		return agoFn(t)
 	},
 	"date": func(unix int64) string { return time.Unix(unix, 0).UTC().Format("2006-01-02 15:04") },
 	"unixtime": func(unix int64) string {

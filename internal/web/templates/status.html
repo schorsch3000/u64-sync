@@ -1,92 +1,107 @@
 {{define "status"}}
-<article>
-  <header>
-    Device
-    {{if .Device.Up}}<span class="ok">● up</span>{{else}}<span class="bad">● down</span>{{end}}
-    <span class="muted">since {{ago .Device.Since}}</span>
-  </header>
-  {{with .Device.Info}}<p class="muted">{{index . "product"}} · firmware {{index . "firmware_version"}} · {{index . "hostname"}}</p>{{end}}
-  <p>Syncing {{range $i, $r := .Roots}}{{if $i}}, {{end}}<code>{{$r}}</code>{{end}}</p>
-  <div class="grid">
-    <div><strong>{{.Counts.Files}}</strong><br><small class="muted">files on device ({{bytes .Counts.Bytes}})</small></div>
-    <div><strong>{{.Counts.Pending}}</strong><br><small class="muted">pending ({{bytes .Counts.PendingByte}})</small></div>
-    <div><strong class="{{if .Counts.Failing}}bad{{end}}">{{.Counts.Failing}}</strong><br><small class="muted">failing</small></div>
-    <div><strong>{{.Counts.Deleted}}</strong><br><small class="muted">deleted on device</small></div>
-  </div>
-  <p class="muted">Last complete sync: {{if .CompleteAt}}{{.CompleteAt}}{{else}}never{{end}}</p>
-</article>
-
 {{range .Crawler.Brake}}
-<article>
-  <header class="bad">Deletion brake: <code>{{.}}</code></header>
-  <p>Many files vanished from <code>{{.}}</code> at once. Nothing was removed locally. If the device was really cleaned up, approve the deletions.</p>
+<article class="alert">
+  <header>Deletion brake <span class="badge bad">action needed</span></header>
+  <p>Many files vanished from <code>{{.}}</code> at once, so nothing was removed locally. If the device was really cleaned up, approve the deletions; if the card or the connection misbehaved, leave it.</p>
   <form hx-post="/ui/approve" hx-target="#status" hx-swap="innerHTML"><input type="hidden" name="root" value="{{.}}"><button class="secondary">Approve deletions</button></form>
 </article>
 {{end}}
 
+<div class="stats">
+  <div class="stat"><div class="label">On device</div><div class="value">{{.Counts.Files}}</div><div class="sub">files · {{bytes .Counts.Bytes}}</div></div>
+  <div class="stat"><div class="label">Backed up</div><div class="value {{if and (eq .Counts.Pending 0) .Counts.Files}}ok{{end}}">{{pct (sub .Counts.Files .Counts.Pending) .Counts.Files}}%</div><div class="sub">{{sub .Counts.Files .Counts.Pending}} of {{.Counts.Files}} files</div></div>
+  <div class="stat"><div class="label">Pending</div><div class="value">{{.Counts.Pending}}</div><div class="sub">{{bytes .Counts.PendingByte}} to copy</div></div>
+  <div class="stat"><div class="label">Problems</div><div class="value {{if .Counts.Failing}}bad{{end}}">{{.Counts.Failing}}</div><div class="sub">failing · {{.Counts.Deleted}} deleted on device</div></div>
+</div>
+<div class="overall">
+  <progress value="{{sub .Counts.Files .Counts.Pending}}" max="{{if .Counts.Files}}{{.Counts.Files}}{{else}}1{{end}}"></progress>
+  <div class="row"><span>{{if .CompleteAt}}Last complete sync {{agostr .CompleteAt}}{{else}}No complete sync yet{{end}}</span><span>{{if .CrawlOKAt}}last full crawl {{agostr .CrawlOKAt}}{{end}}</span></div>
+</div>
+
+<div class="card-grid">
 <article>
-  <header>Copier</header>
-  {{if .Copier.Current}}
-    <p><code>{{.Copier.Current}}</code></p>
-    <progress value="{{.Copier.Done}}" max="{{.Copier.Total}}"></progress>
-    <small class="muted">{{bytes .Copier.Done}} / {{bytes .Copier.Total}}</small>
-  {{else}}<p class="muted">idle</p>{{end}}
-  <small class="muted">{{.Copier.Copied}} files copied since start · last ok {{ago .Copier.LastOK}}</small>
-  {{if .Copier.LastError}}<p class="bad"><small>{{.Copier.LastError}}</small></p>{{end}}
+  <header>Device
+    {{if .Device.Up}}<span class="badge ok"><span class="dot"></span>online</span>{{else}}<span class="badge bad"><span class="dot"></span>offline</span>{{end}}
+  </header>
+  <dl class="kv">
+    {{with .Device.Info}}
+    <dt>Model</dt><dd>{{index . "product"}}</dd>
+    <dt>Firmware</dt><dd>{{index . "firmware_version"}}</dd>
+    <dt>Hostname</dt><dd>{{index . "hostname"}}</dd>
+    {{end}}
+    <dt>State</dt><dd>{{if .Device.Up}}up{{else}}down{{end}} since {{ago .Device.Since}}</dd>
+    <dt>Syncing</dt><dd>{{range $i, $r := .Roots}}{{if $i}} {{end}}<code>{{$r}}</code>{{end}}</dd>
+  </dl>
 </article>
 
 <article>
-  <header>Crawler</header>
-  {{if .Crawler.Running}}<p>crawling <code>{{.Crawler.Dir}}</code></p><small class="muted">{{.Crawler.Dirs}} dirs · {{.Crawler.Files}} files this pass</small>
-  {{else}}<p class="muted">idle · last finished {{ago .Crawler.LastEnd}} {{if .Crawler.LastOK}}<span class="ok">ok</span>{{else if not .Crawler.LastEnd.IsZero}}<span class="bad">incomplete</span>{{end}}</p>{{end}}
+  <header>Activity
+    {{if .Throttle.Paused}}<span class="badge warn">paused</span>{{else if or .Copier.Current .Crawler.Running}}<span class="badge info live"><span class="dot"></span>working</span>{{else}}<span class="badge">idle</span>{{end}}
+  </header>
+  <p><strong>Copying</strong>
+  {{if .Copier.Current}}<br><code>{{.Copier.Current}}</code>
+    <progress value="{{.Copier.Done}}" max="{{if .Copier.Total}}{{.Copier.Total}}{{else}}1{{end}}"></progress>
+    <small class="muted">{{bytes .Copier.Done}} of {{bytes .Copier.Total}}</small>
+  {{else}}<span class="muted"> idle</span>{{end}}
+  <br><small class="muted">{{.Copier.Copied}} copied since start · last success {{ago .Copier.LastOK}}</small></p>
+  {{if .Copier.LastError}}<p class="bad"><small>{{.Copier.LastError}}</small></p>{{end}}
+  <p><strong>Crawling</strong>
+  {{if .Crawler.Running}}<br><code>{{.Crawler.Dir}}</code><br><small class="muted">{{.Crawler.Dirs}} folders · {{.Crawler.Files}} files this pass</small>
+  {{else}}<span class="muted"> idle</span><br><small class="muted">last pass {{ago .Crawler.LastEnd}} {{if .Crawler.LastOK}}<span class="ok">complete</span>{{else if not .Crawler.LastEnd.IsZero}}<span class="warn">incomplete</span>{{end}}</small>{{end}}</p>
   {{if .Crawler.LastError}}<p class="bad"><small>{{.Crawler.LastError}}</small></p>{{end}}
 </article>
 
 <article>
-  <header>Snapshots {{if not .Snapshots.Enabled}}<span class="muted">(disabled)</span>{{end}}</header>
+  <header>Snapshots {{if .Snapshots.Enabled}}<span class="badge">{{len .Snapshots.Names}} kept</span>{{else}}<span class="badge">disabled</span>{{end}}</header>
   {{if .Snapshots.Enabled}}
-    {{if .Snapshots.Names}}<p>{{len .Snapshots.Names}} kept, newest <code>{{index .Snapshots.Names 0}}</code></p>
-    <details><summary>All snapshots</summary><ul>{{range .Snapshots.Names}}<li><code>{{.}}</code></li>{{end}}</ul></details>
-    {{else}}<p class="muted">none yet (first one after the first complete sync)</p>{{end}}
+    {{if .Snapshots.Names}}<p>Newest: <code>{{index .Snapshots.Names 0}}</code></p>
+    {{if gt (len .Snapshots.Names) 1}}<details><summary>All snapshots</summary><ul>{{range .Snapshots.Names}}<li><code>{{.}}</code></li>{{end}}</ul></details>{{end}}
+    {{else}}<p class="muted">None yet. The first one is taken after the first complete sync.</p>{{end}}
     {{if .Snapshots.LastError}}<p class="bad"><small>{{.Snapshots.LastError}}</small></p>{{end}}
-  {{end}}
+  {{else}}<p class="muted">Hardlink snapshots are switched off in the configuration.</p>{{end}}
 </article>
 
 <article>
-  <header>Verification {{if not .Verify.Enabled}}<span class="muted">(disabled)</span>{{end}}</header>
+  <header>Verification {{if .Verify.Enabled}}{{if .Verify.Current}}<span class="badge info live"><span class="dot"></span>checking</span>{{else}}<span class="badge">idle</span>{{end}}{{else}}<span class="badge">disabled</span>{{end}}</header>
   {{if .Verify.Enabled}}
-    <p>{{.Verify.Verified}} files verified recently, {{.Verify.Stale}} due{{if .Verify.Current}} · checking <code>{{.Verify.Current}}</code>{{end}}</p>
-    <small class="muted">{{.Verify.Checked}} checked since start · {{.Verify.Repaired}} bad copies queued for re-download</small>
+    <dl class="kv">
+      <dt>Verified</dt><dd>{{.Verify.Verified}} files recently</dd>
+      <dt>Due</dt><dd>{{.Verify.Stale}} files</dd>
+      <dt>Since start</dt><dd>{{.Verify.Checked}} checked · {{.Verify.Repaired}} repaired</dd>
+    </dl>
+    {{if .Verify.Current}}<p><small class="muted">now: <code>{{.Verify.Current}}</code></small></p>{{end}}
     {{if .Verify.LastBad}}<p class="bad"><small>{{ago .Verify.LastTime}}: {{.Verify.LastBad}}</small></p>{{end}}
-  {{end}}
+  {{else}}<p class="muted">Re-hashing of local files is switched off in the configuration.</p>{{end}}
 </article>
+</div>
 
 {{if .Problems}}
 <article>
-  <header class="bad">Failing files</header>
-  <table><thead><tr><th>File</th><th class="num">Fails</th><th>Error</th><th class="num">Next try</th></tr></thead><tbody>
-  {{range .Problems}}<tr><td><code>{{.Root}}/{{.Path}}</code></td><td class="num">{{.Fails}}</td><td><small>{{.Err}}</small></td><td class="num">{{unixtime .NextTry}}</td></tr>{{end}}
-  </tbody></table>
+  <header>Failing files <span class="badge bad">{{.Counts.Failing}}</span></header>
+  <div class="tablewrap"><table>
+    <thead><tr><th>File</th><th class="num">Fails</th><th>Error</th><th class="num">Next try</th></tr></thead>
+    <tbody>{{range .Problems}}<tr><td class="name"><code>{{.Root}}/{{.Path}}</code></td><td class="num">{{.Fails}}</td><td><small>{{.Err}}</small></td><td class="num">{{unixtime .NextTry}}</td></tr>{{end}}</tbody>
+  </table></div>
 </article>
 {{end}}
 
 <article>
   <header>Controls</header>
-  <div class="actions">
+  <div class="controls">
     <form hx-post="/ui/crawl" hx-target="#status" hx-swap="innerHTML"><button>Crawl now</button></form>
     <form hx-post="/ui/snapshot" hx-target="#status" hx-swap="innerHTML"><button class="secondary">Snapshot now</button></form>
     <form hx-post="/ui/pause" hx-target="#status" hx-swap="innerHTML">
       <input type="hidden" name="paused" value="{{if .Throttle.Paused}}0{{else}}1{{end}}">
-      <button class="{{if .Throttle.Paused}}contrast{{else}}secondary{{end}}">{{if .Throttle.Paused}}Resume{{else}}Pause{{end}} device traffic</button>
+      <button class="{{if .Throttle.Paused}}contrast{{else}}secondary outline{{end}}">{{if .Throttle.Paused}}Resume device traffic{{else}}Pause device traffic{{end}}</button>
     </form>
   </div>
-  <form hx-post="/ui/throttle" hx-target="#status" hx-swap="innerHTML">
+  <form class="throttle" hx-post="/ui/throttle" hx-target="#status" hx-swap="innerHTML">
     <fieldset role="group">
-      <input type="number" name="kbps" min="0" value="{{.Throttle.KBps}}" aria-label="KiB/s">
-      <input type="number" name="delay_ms" min="0" max="60000" value="{{.Throttle.DelayMS}}" aria-label="command delay ms">
-      <button>Set</button>
+      <input type="number" name="kbps" min="0" value="{{.Throttle.KBps}}" aria-label="KiB per second">
+      <input type="number" name="delay_ms" min="0" max="60000" value="{{.Throttle.DelayMS}}" aria-label="delay between commands in ms">
+      <button>Apply</button>
     </fieldset>
-    <small class="muted">KiB/s (0 = unlimited) · ms between FTP commands</small>
+    <small class="muted">Left: KiB/s (0 = unlimited) · right: milliseconds between FTP commands</small>
   </form>
 </article>
 {{end}}

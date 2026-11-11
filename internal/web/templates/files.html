@@ -1,24 +1,37 @@
 {{define "content"}}
 {{if .IsRoot}}
-<h3>Files</h3>
-<table><thead><tr><th>Root</th><th class="num">Files</th><th class="num">Size</th><th class="num">Pending</th><th></th></tr></thead><tbody>
-{{range .Roots}}<tr><td><a href="/files/{{.Name}}">{{.Name}}/</a></td><td class="num">{{.Files}}</td><td class="num">{{bytes .Bytes}}</td><td class="num">{{.Pending}}</td><td class="num"><a href="/zip/{{.Name}}">zip</a></td></tr>{{end}}
-</tbody></table>
+<h2>Files</h2>
+<div class="card-grid">
+{{range .Roots}}
+<article>
+  <header><a href="/files/{{.Name}}">📁 {{.Name}}</a>{{if .Pending}}<span class="badge info">{{.Pending}} pending</span>{{else}}<span class="badge ok">backed up</span>{{end}}</header>
+  <dl class="kv"><dt>Files</dt><dd>{{.Files}}</dd><dt>Size</dt><dd>{{bytes .Bytes}}</dd></dl>
+  <a href="/zip/{{.Name}}" role="button" class="secondary outline">Download as zip</a>
+</article>
+{{end}}
+</div>
 {{else}}
-<nav aria-label="breadcrumb"><ul>{{range .Crumbs}}<li><a href="{{.URL}}">{{.Name}}</a></li>{{end}}</ul></nav>
-<p><a href="{{.ZipURL}}">Download this folder as zip</a></p>
-<table><thead><tr><th>Name</th><th class="num">Size</th><th class="num">Modified</th><th>State</th></tr></thead><tbody>
-{{range .Entries}}<tr>
-  <td>{{if .IsDir}}<a href="{{$.Base}}{{.Name}}">{{.Name}}/</a>{{else}}<a href="/dl/{{slice $.Base 7}}{{.Name}}">{{.Name}}</a>{{end}}</td>
-  <td class="num">{{bytes .Size}}{{if .IsDir}} <small class="muted">({{.Files}} files)</small>{{end}}</td>
-  <td class="num">{{if .MTime}}{{date .MTime}}{{end}}</td>
+<nav aria-label="breadcrumb"><ul class="crumbs">{{range .Crumbs}}<li><a href="{{.URL}}">{{.Name}}</a></li>{{end}}</ul></nav>
+<div class="toolbar">
+  <input type="search" id="filter" placeholder="Filter this folder…" aria-label="Filter this folder">
+  <a href="{{.ZipURL}}" role="button" class="secondary outline">Download folder as zip</a>
+</div>
+<div class="tablewrap"><table id="listing">
+<thead><tr><th>Name</th><th class="num">Size</th><th class="num hide-sm">Modified</th><th>State</th></tr></thead>
+<tbody>
+{{range .Entries}}<tr{{if .IsDir}} class="dir"{{end}}>
+  <td class="name">{{if .IsDir}}<span class="icon">📁</span><a href="{{$.Base}}{{.Name}}">{{.Name}}</a>{{else}}<span class="icon">📄</span><a href="/dl/{{slice $.Base 7}}{{.Name}}">{{.Name}}</a>{{end}}</td>
+  <td class="num">{{bytes .Size}}{{if .IsDir}}<br><small class="muted">{{.Files}} files</small>{{end}}</td>
+  <td class="num hide-sm">{{if .MTime}}{{date .MTime}}{{end}}</td>
   <td>
-    {{if .Failing}}<span class="bad">failing{{if .IsDir}} ({{.Failing}}){{end}}</span>
-    {{else if .Pending}}<span class="muted">pending{{if .IsDir}} ({{.Pending}}){{end}}</span>
-    {{else if .Deleted}}<span class="muted">deleted on device{{if .IsDir}} ({{.Deleted}}){{end}}</span>
-    {{else}}<span class="ok">backed up</span>{{end}}
+    {{if .Failing}}<span class="badge bad">{{if .IsDir}}{{.Failing}} failing{{else}}failing{{end}}</span>
+    {{else if .Pending}}<span class="badge info">{{if .IsDir}}{{.Pending}} pending{{else}}pending{{end}}</span>
+    {{else if .Deleted}}<span class="badge warn">{{if .IsDir}}{{.Deleted}} deleted on device{{else}}deleted on device{{end}}</span>
+    {{else}}<span class="badge ok">backed up</span>{{end}}
+    {{if and .IsDir .Deleted (or .Failing .Pending)}} <span class="badge warn">{{.Deleted}} deleted</span>{{end}}
     {{if .Err}}<br><small class="bad">{{.Err}}</small>{{end}}
-  </td></tr>{{end}}
-</tbody></table>
+  </td></tr>
+{{else}}<tr><td colspan="4" class="empty">Nothing here.</td></tr>{{end}}
+</tbody></table></div>
 {{end}}
 {{end}}
