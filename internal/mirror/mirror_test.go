@@ -104,3 +104,24 @@ func TestInstallWhileFileOpen(t *testing.T) {
 		t.Fatalf("target has %q", b)
 	}
 }
+
+func TestPruneEmpty(t *testing.T) {
+	d := t.TempDir()
+	m := &Mirror{Current: filepath.Join(d, "cur")}
+	for _, p := range []string{"SD/a/b/c", "SD/keep", "Flash/empty"} {
+		os.MkdirAll(filepath.Join(m.Current, filepath.FromSlash(p)), 0o755)
+	}
+	os.WriteFile(filepath.Join(m.Current, "SD", "keep", "f.prg"), []byte("x"), 0o644)
+	m.PruneEmpty()
+	for _, gone := range []string{"SD/a", "Flash"} {
+		if _, err := os.Stat(filepath.Join(m.Current, filepath.FromSlash(gone))); !os.IsNotExist(err) {
+			t.Errorf("%s not pruned", gone)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(m.Current, "SD", "keep", "f.prg")); err != nil {
+		t.Fatal("non-empty directory damaged")
+	}
+	if _, err := os.Stat(m.Current); err != nil {
+		t.Fatal("mirror root removed")
+	}
+}

@@ -148,9 +148,13 @@ func TestMirrorLifecycle(t *testing.T) {
 		_, ok := s.local("/SD", "Games/b.d64")
 		return !ok
 	})
-	if _, err := os.Stat(filepath.Join(s.mir.Current, "SD", "Games")); !os.IsNotExist(err) {
-		t.Fatal("empty directory not pruned")
-	}
+	// The file disappears a moment before its empty folder (and on Windows a deleted
+	// file that is still open delays that), so wait; the next crawl's cleanup catches stragglers.
+	eventually(t, "empty directory pruned", func() bool {
+		s.crawlNow()
+		_, err := os.Stat(filepath.Join(s.mir.Current, "SD", "Games"))
+		return os.IsNotExist(err)
+	})
 
 	t.Log("bit rot on the backup disk is detected and repaired")
 	rotten, _ := s.mir.Path("/SD", "new.prg")

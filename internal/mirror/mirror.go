@@ -3,6 +3,7 @@ package mirror
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,6 +101,24 @@ func (m *Mirror) Install(tmp *os.File, target string, mtime time.Time) error {
 		d.Close()
 	}
 	return nil
+}
+
+// PruneEmpty removes empty directories below Current. Remove already prunes the
+// parents of a file it deletes; this catches what it missed (a directory that
+// could not be removed while a deleted file was still held open, as on Windows).
+func (m *Mirror) PruneEmpty() {
+	m.Mu.Lock()
+	defer m.Mu.Unlock()
+	var dirs []string
+	filepath.WalkDir(m.Current, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() && p != m.Current {
+			dirs = append(dirs, p)
+		}
+		return nil
+	})
+	for i := len(dirs) - 1; i >= 0; i-- { // children before parents
+		os.Remove(dirs[i]) // fails, harmlessly, while not empty
+	}
 }
 
 // Remove deletes a mirrored file and prunes empty parent dirs up to Current.

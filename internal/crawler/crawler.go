@@ -235,6 +235,7 @@ func (c *Crawler) purge() {
 		}
 		c.st.Forget(f)
 	}
+	c.mir.PruneEmpty()
 }
 
 // ApproveBrake lets the next crawl apply a refused mass deletion for root, then starts a crawl.
