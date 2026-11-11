@@ -26,6 +26,9 @@ type Verifier struct {
 	mir  *mirror.Mirror
 	wake chan<- struct{} // tells the copier new work exists
 
+	// Poll is how long to wait when no file is due. Default 10 minutes.
+	Poll time.Duration
+
 	mu     sync.Mutex
 	status Status
 }
@@ -42,7 +45,7 @@ type Status struct {
 }
 
 func New(cfg config.Verify, st *store.Store, mir *mirror.Mirror, wake chan<- struct{}) *Verifier {
-	return &Verifier{cfg: cfg, st: st, mir: mir, wake: wake}
+	return &Verifier{cfg: cfg, st: st, mir: mir, wake: wake, Poll: 10 * time.Minute}
 }
 
 func (v *Verifier) Status() Status {
@@ -77,7 +80,7 @@ func (v *Verifier) Run(ctx context.Context) {
 		if n == 0 { // nothing due: look again later
 			select {
 			case <-ctx.Done():
-			case <-time.After(10 * time.Minute):
+			case <-time.After(v.Poll):
 			}
 		}
 	}

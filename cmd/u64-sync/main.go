@@ -94,7 +94,7 @@ func run(cfgFile string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	dev := device.New(cfg.Device.Host, cfg.Device.RESTPassword, cfg.Sync.DevicePollTimeout)
+	dev := device.New(cfg.Device.Host, cfg.Device.RESTPort, cfg.Device.RESTPassword, cfg.Sync.DevicePollTimeout)
 	th := throttle.New(cfg.Throttle.BytesPerSecond, cfg.Throttle.CommandDelay)
 	if v, err := strconv.Atoi(st.GetKV("throttle_bps")); err == nil {
 		d := cfg.Throttle.CommandDelay

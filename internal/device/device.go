@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -21,8 +23,8 @@ type Monitor struct {
 	info    map[string]any
 }
 
-func New(host, restPassword string, timeout time.Duration) *Monitor {
-	return &Monitor{host: host, password: restPassword, client: &http.Client{Timeout: timeout}}
+func New(host string, restPort int, restPassword string, timeout time.Duration) *Monitor {
+	return &Monitor{host: net.JoinHostPort(host, strconv.Itoa(restPort)), password: restPassword, client: &http.Client{Timeout: timeout}}
 }
 
 type State struct {

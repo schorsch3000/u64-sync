@@ -25,6 +25,7 @@ type Config struct {
 type Device struct {
 	Host         string   `yaml:"host"`
 	FTPPort      int      `yaml:"ftp_port"`
+	RESTPort     int      `yaml:"rest_port"`
 	FTPUser      string   `yaml:"ftp_user"`
 	FTPPassword  string   `yaml:"ftp_password"`  // env U64_FTP_PASSWORD overrides
 	RESTPassword string   `yaml:"rest_password"` // env U64_REST_PASSWORD overrides
@@ -80,6 +81,7 @@ type Web struct {
 func Default() Config {
 	var c Config
 	c.Device.FTPPort = 21
+	c.Device.RESTPort = 80
 	c.Device.FTPUser = "anonymous"
 	c.Device.Roots = []string{"/SD", "/Flash"}
 	c.Storage.DataDir = "./data"

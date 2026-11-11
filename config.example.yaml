@@ -1,6 +1,7 @@
 device:
   host: 10.0.100.8
   ftp_port: 21
+  rest_port: 80
   ftp_user: anonymous
   ftp_password: ""        # or env U64_FTP_PASSWORD
   rest_password: ""       # or env U64_REST_PASSWORD

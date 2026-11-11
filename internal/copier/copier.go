@@ -183,11 +183,11 @@ func (w *Copier) copyOne(ctx context.Context, cl *ftpx.Client, f store.File) err
 	if n != f.Size || cur.Size != f.Size || cur.ModTime.Unix() != f.MTime {
 		tmp.Close()
 		removeFile(tmp.Name())
-		if cur.Size == n { // stable at new values
-			f.Size, f.MTime = cur.Size, cur.ModTime.Unix()
-			if err := w.st.UpdateRemote(f); err != nil {
-				return err
-			}
+		// Record what the device has now, so the retry targets the current version
+		// instead of downloading again against stale metadata until the next crawl.
+		f.Size, f.MTime = cur.Size, cur.ModTime.Unix()
+		if err := w.st.UpdateRemote(f); err != nil {
+			return err
 		}
 		return fmt.Errorf("%w: %s", errChanged, remote)
 	}

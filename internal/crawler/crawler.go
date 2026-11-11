@@ -118,6 +118,10 @@ func (c *Crawler) pass(ctx context.Context) error {
 	if allOK {
 		c.st.SetKV("crawl_ok_gen", strconv.FormatInt(gen, 10))
 		c.st.SetKV("crawl_ok_at", time.Now().UTC().Format(time.RFC3339))
+		select { // let an idle copier notice that the mirror may be complete
+		case c.Wake <- struct{}{}:
+		default:
+		}
 	} else {
 		firstErr = errors.New("some directories could not be listed")
 	}
@@ -135,8 +139,8 @@ func (c *Crawler) finish(ok bool, err error, brake []string) {
 	})
 }
 
-// crawlRoot lists a root breadth-first. ok=false means some directory was
-// skipped, so deletions for this root must not be applied. err means the
+// crawlRoot lists a root breadth-first. ok=false means some directory (or the
+// root itself) was skipped, so deletions for this root must not be applied. err means the
 // connection is unusable.
 func (c *Crawler) crawlRoot(ctx context.Context, cl *ftpx.Client, root string, gen int64) (ok bool, err error) {
 	ok = true
@@ -151,7 +155,7 @@ func (c *Crawler) crawlRoot(ctx context.Context, cl *ftpx.Client, root string, g
 		ents, lerr := cl.List(ctx, path.Join(root, dir))
 		if lerr != nil {
 			var re *ftpx.ReplyError
-			if errors.As(lerr, &re) && dir != "" {
+			if errors.As(lerr, &re) { // the device answered "no": skip it, but the crawl is incomplete
 				slog.Warn("cannot list directory, skipping", "dir", root+"/"+dir, "err", lerr)
 				ok = false
 				continue

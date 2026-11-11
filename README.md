@@ -40,6 +40,12 @@ an NTFS volume (snapshots need hardlinks).
 
 `cmd/u64-probe` inspects a device (FTP features, listing format, connection limit).
 
+## Development
+
+`make help` lists all tasks. The common ones: `make build`, `make test`, `make check` (what CI
+runs: gofmt, tidy, vet for three platforms, race tests), `make dist` (release archives).
+Tests run against an in-process fake Ultimate64 (`internal/fakeftp`), no device needed.
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Bundled Pico.css and htmx (both MIT) keep their licenses in `internal/web/static/`.
