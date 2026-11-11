@@ -61,6 +61,11 @@ article p:last-child { margin-bottom: 0; }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; margin: 0 0 .5rem; font-size: .92rem; }
 .kv dt { color: var(--pico-muted-color); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
+/* activity: three blocks side by side when there is room */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0 1.75rem; align-items: start; }
+.split p { margin-bottom: .6rem; }
+.speed { margin-bottom: 0; }
+
 /* stat tiles */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: 1rem; margin-bottom: 1rem; }
 .stat { background: var(--pico-card-background-color); border: 1px solid var(--pico-card-border-color, var(--pico-muted-border-color));

@@ -34,22 +34,7 @@
   </dl>
 </article>
 
-<article>
-  <header>Activity
-    {{if .Throttle.Paused}}<span class="badge warn">paused</span>{{else if or .Copier.Current .Crawler.Running}}<span class="badge info live"><span class="dot"></span>working</span>{{else}}<span class="badge">idle</span>{{end}}
-  </header>
-  <p><strong>Copying</strong>
-  {{if .Copier.Current}}<br><code>{{.Copier.Current}}</code>
-    <progress value="{{.Copier.Done}}" max="{{if .Copier.Total}}{{.Copier.Total}}{{else}}1{{end}}"></progress>
-    <small class="muted">{{bytes .Copier.Done}} of {{bytes .Copier.Total}}</small>
-  {{else}}<span class="muted"> idle</span>{{end}}
-  <br><small class="muted">{{.Copier.Copied}} copied since start · last success {{ago .Copier.LastOK}}</small></p>
-  {{if .Copier.LastError}}<p class="bad"><small>{{.Copier.LastError}}</small></p>{{end}}
-  <p><strong>Crawling</strong>
-  {{if .Crawler.Running}}<br><code>{{.Crawler.Dir}}</code><br><small class="muted">{{.Crawler.Dirs}} folders · {{.Crawler.Files}} files this pass</small>
-  {{else}}<span class="muted"> idle</span><br><small class="muted">last pass {{ago .Crawler.LastEnd}} {{if .Crawler.LastOK}}<span class="ok">complete</span>{{else if not .Crawler.LastEnd.IsZero}}<span class="warn">incomplete</span>{{end}}</small>{{end}}</p>
-  {{if .Crawler.LastError}}<p class="bad"><small>{{.Crawler.LastError}}</small></p>{{end}}
-</article>
+
 
 <article>
   <header>Snapshots {{if .Snapshots.Enabled}}<span class="badge">{{len .Snapshots.Names}} kept</span>{{else}}<span class="badge">disabled</span>{{end}}</header>
@@ -108,5 +93,39 @@
     </div>
     <button>Apply</button>
   </form>
+</article>
+
+<article>
+  <header>Activity
+    {{if .Throttle.Paused}}<span class="badge warn">paused</span>{{else if or .Copier.Current .Crawler.Running}}<span class="badge info live"><span class="dot"></span>working</span>{{else}}<span class="badge">idle</span>{{end}}
+  </header>
+  <div class="split">
+  <div>
+  <p><strong>Copying</strong>
+  {{if .Copier.Current}}<br><code>{{.Copier.Current}}</code>
+    <progress value="{{.Copier.Done}}" max="{{if .Copier.Total}}{{.Copier.Total}}{{else}}1{{end}}"></progress>
+    <small class="muted">{{bytes .Copier.Done}} of {{bytes .Copier.Total}}</small>
+  {{else}}<span class="muted"> idle</span>{{end}}
+  <br><small class="muted">{{.Copier.Copied}} copied since start · last success {{ago .Copier.LastOK}}</small></p>
+  {{if .Copier.LastError}}<p class="bad"><small>{{.Copier.LastError}}</small></p>{{end}}
+  </div>
+  <div>
+  <p><strong>Speed</strong></p>
+  {{with .Copier.Rates}}{{if .SyncBytes}}
+  <dl class="kv speed">
+    <dt>Last minute</dt><dd>{{speed .Last1m}}</dd>
+    <dt>Last 5 minutes</dt><dd>{{speed .Last5m}}</dd>
+    <dt>{{if .Running}}This sync{{else}}Last sync{{end}}</dt><dd>{{speed .Sync}} <small class="muted">· {{bytes .SyncBytes}} in {{dur .SyncDuration}}</small></dd>
+    {{with eta $.Counts.PendingByte .}}<dt>Remaining</dt><dd>{{.}} <small class="muted">at the current speed</small></dd>{{end}}
+  </dl>
+  {{else}}<p class="muted"><small>No data yet.</small></p>{{end}}{{end}}
+  </div>
+  <div>
+  <p><strong>Crawling</strong>
+  {{if .Crawler.Running}}<br><code>{{.Crawler.Dir}}</code><br><small class="muted">{{.Crawler.Dirs}} folders · {{.Crawler.Files}} files this pass</small>
+  {{else}}<span class="muted"> idle</span><br><small class="muted">last pass {{ago .Crawler.LastEnd}} {{if .Crawler.LastOK}}<span class="ok">complete</span>{{else if not .Crawler.LastEnd.IsZero}}<span class="warn">incomplete</span>{{end}}</small>{{end}}</p>
+  {{if .Crawler.LastError}}<p class="bad"><small>{{.Crawler.LastError}}</small></p>{{end}}
+  </div>
+  </div>
 </article>
 {{end}}

@@ -23,6 +23,7 @@ import (
 	"github.com/schorsch3000/u64-sync/internal/copier"
 	"github.com/schorsch3000/u64-sync/internal/crawler"
 	"github.com/schorsch3000/u64-sync/internal/device"
+	"github.com/schorsch3000/u64-sync/internal/meter"
 	"github.com/schorsch3000/u64-sync/internal/mirror"
 	"github.com/schorsch3000/u64-sync/internal/snapshot"
 	"github.com/schorsch3000/u64-sync/internal/store"
@@ -84,6 +85,32 @@ func (s *Server) status() status {
 	}
 }
 
+func humanBytes(n int64) string {
+	const u = "KMGT"
+	if n < 1024 {
+		return fmt.Sprintf("%d B", n)
+	}
+	f, i := float64(n)/1024, 0
+	for f >= 1024 && i < len(u)-1 {
+		f /= 1024
+		i++
+	}
+	return fmt.Sprintf("%.1f %ciB", f, u[i])
+}
+
+func humanDur(d time.Duration) string {
+	d = d.Round(time.Second)
+	switch {
+	case d >= 24*time.Hour:
+		return fmt.Sprintf("%dd %dh", int(d.Hours())/24, int(d.Hours())%24)
+	case d >= time.Hour:
+		return fmt.Sprintf("%dh %dm", int(d.Hours()), int(d.Minutes())%60)
+	case d >= time.Minute:
+		return fmt.Sprintf("%dm %ds", int(d.Minutes()), int(d.Seconds())%60)
+	}
+	return fmt.Sprintf("%ds", int(d.Seconds()))
+}
+
 func agoFn(t time.Time) string {
 	if t.IsZero() || t.Year() < 2000 {
 		return "never"
@@ -103,19 +130,29 @@ func agoFn(t time.Time) string {
 }
 
 var funcs = template.FuncMap{
-	"bytes": func(n int64) string {
-		const u = "KMGT"
-		if n < 1024 {
-			return fmt.Sprintf("%d B", n)
+	"bytes": humanBytes,
+	"ago":   agoFn,
+	"speed": func(bps float64) string {
+		if bps < 1 {
+			return "0 B/s"
 		}
-		f, i := float64(n)/1024, 0
-		for f >= 1024 && i < len(u)-1 {
-			f /= 1024
-			i++
-		}
-		return fmt.Sprintf("%.1f %ciB", f, u[i])
+		return humanBytes(int64(bps)) + "/s"
 	},
-	"ago": agoFn,
+	"dur": humanDur,
+	"eta": func(pending int64, r meter.Rates) string {
+		rate := r.Last1m
+		if rate <= 0 {
+			rate = r.Sync
+		}
+		if pending <= 0 || !r.Running || rate <= 0 {
+			return ""
+		}
+		secs := float64(pending) / rate
+		if secs > 365*24*3600 {
+			return "more than a year"
+		}
+		return "about " + humanDur(time.Duration(secs*float64(time.Second)))
+	},
 	"sub": func(a, b int) int { return a - b },
 	"pct": func(a, b int) int {
 		if b <= 0 {

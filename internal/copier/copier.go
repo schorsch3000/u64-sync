@@ -16,6 +16,7 @@ import (
 	"github.com/schorsch3000/u64-sync/internal/config"
 	"github.com/schorsch3000/u64-sync/internal/device"
 	"github.com/schorsch3000/u64-sync/internal/ftpx"
+	"github.com/schorsch3000/u64-sync/internal/meter"
 	"github.com/schorsch3000/u64-sync/internal/mirror"
 	"github.com/schorsch3000/u64-sync/internal/store"
 	"github.com/schorsch3000/u64-sync/internal/throttle"
@@ -29,17 +30,19 @@ type Copier struct {
 	mir  *mirror.Mirror
 	Wake chan struct{}
 
+	meter  meter.Meter
 	mu     sync.Mutex
 	status Status
 }
 
 type Status struct {
-	Current   string    `json:"current,omitempty"`
-	Done      int64     `json:"done_bytes"`
-	Total     int64     `json:"total_bytes"`
-	LastOK    time.Time `json:"last_ok"`
-	LastError string    `json:"last_error,omitempty"`
-	Copied    int       `json:"copied"` // since start
+	Current   string      `json:"current,omitempty"`
+	Done      int64       `json:"done_bytes"`
+	Total     int64       `json:"total_bytes"`
+	LastOK    time.Time   `json:"last_ok"`
+	LastError string      `json:"last_error,omitempty"`
+	Copied    int         `json:"copied"` // since start
+	Rates     meter.Rates `json:"rates"`
 }
 
 func New(cfg config.Config, st *store.Store, dev *device.Monitor, th *throttle.Throttle, mir *mirror.Mirror) *Copier {
@@ -48,8 +51,10 @@ func New(cfg config.Config, st *store.Store, dev *device.Monitor, th *throttle.T
 
 func (w *Copier) Status() Status {
 	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.status
+	s := w.status
+	w.mu.Unlock()
+	s.Rates = w.meter.Rates()
+	return s
 }
 
 func (w *Copier) update(f func(*Status)) {
@@ -87,6 +92,7 @@ func (w *Copier) Run(ctx context.Context) {
 		}
 		if !ok {
 			closeClient() // free the device's connection slot while idle
+			w.meter.Idle()
 			w.markComplete()
 			w.sleep(ctx, 15*time.Second)
 			continue
@@ -206,6 +212,7 @@ func (p *progress) Read(b []byte) (int, error) {
 	n, err := p.r.Read(b)
 	if n > 0 {
 		p.w.update(func(s *Status) { s.Done += int64(n) })
+		p.w.meter.Add(n)
 	}
 	return n, err
 }

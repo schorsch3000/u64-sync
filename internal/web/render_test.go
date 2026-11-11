@@ -17,6 +17,7 @@ import (
 	"github.com/schorsch3000/u64-sync/internal/copier"
 	"github.com/schorsch3000/u64-sync/internal/crawler"
 	"github.com/schorsch3000/u64-sync/internal/device"
+	"github.com/schorsch3000/u64-sync/internal/meter"
 	"github.com/schorsch3000/u64-sync/internal/mirror"
 	"github.com/schorsch3000/u64-sync/internal/snapshot"
 	"github.com/schorsch3000/u64-sync/internal/store"
@@ -25,6 +26,16 @@ import (
 )
 
 func testServer(t *testing.T) (http.Handler, *store.Store, *mirror.Mirror) {
+	t.Helper()
+	s, st, mir := newServer(t)
+	h, err := s.Handler()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h, st, mir
+}
+
+func newServer(t *testing.T) (*Server, *store.Store, *mirror.Mirror) {
 	t.Helper()
 	d := t.TempDir()
 	st, err := store.Open(filepath.Join(d, "db"))
@@ -43,11 +54,10 @@ func testServer(t *testing.T) (http.Handler, *store.Store, *mirror.Mirror) {
 		Snapshots: snapshot.New(cfg, st, mir), Throttle: th, Mirror: mir, Verifier: verify.New(cfg.Verify, st, mir, cp.Wake),
 		Roots: []string{"/SD", "/Flash"},
 	}
-	h, err := s.Handler()
-	if err != nil {
+	if err := s.load(); err != nil {
 		t.Fatal(err)
 	}
-	return h, st, mir
+	return s, st, mir
 }
 
 func get(h http.Handler, method, url string) (int, string, http.Header) {
@@ -135,5 +145,34 @@ func TestActions(t *testing.T) {
 	}
 	if code, _, _ := get(h, "POST", "/ui/approve?root=/Nope"); code != 400 {
 		t.Errorf("approve unknown root: %d", code)
+	}
+}
+
+func TestSpeedBlockRenders(t *testing.T) {
+	s, st, _ := newServer(t)
+	st.Upsert([]store.File{{Root: "/SD", Path: "big.bin", Size: 10 << 20, MTime: 1}}, 1)
+	view := s.status()
+	view.Copier.Rates = meter.Rates{Last1m: 182 * 1024, Last5m: 175 * 1024, Sync: 160 * 1024,
+		SyncBytes: 50 << 20, SyncDuration: 5*time.Minute + 20*time.Second, Running: true}
+	w := httptest.NewRecorder()
+	s.render(w, "index", "status", view)
+	body := w.Body.String()
+	for _, want := range []string{"Last minute", "182.0 KiB/s", "Last 5 minutes", "175.0 KiB/s", "This sync", "160.0 KiB/s",
+		"50.0 MiB in 5m 20s", "Remaining", "about 56s"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	view.Copier.Rates.Running = false
+	w = httptest.NewRecorder()
+	s.render(w, "index", "status", view)
+	if b := w.Body.String(); !strings.Contains(b, "Last sync") || strings.Contains(b, "Remaining") {
+		t.Error("finished sync must say 'Last sync' and show no ETA")
+	}
+	view.Copier.Rates = meter.Rates{}
+	w = httptest.NewRecorder()
+	s.render(w, "index", "status", view)
+	if !strings.Contains(w.Body.String(), "No data yet") {
+		t.Error("empty state missing")
 	}
 }
