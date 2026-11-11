@@ -34,3 +34,7 @@ Env overrides: `U64_HOST`, `U64_FTP_PASSWORD`, `U64_REST_PASSWORD`, `U64_WEB_USE
 `U64_WEB_PASSWORD`, `U64_WEB_LISTEN`, `U64_DATA_DIR`.
 
 `cmd/u64-probe` inspects a device (FTP features, listing format, connection limit).
+
+## License
+
+MIT, see [LICENSE](LICENSE). Bundled Pico.css and htmx (both MIT) keep their licenses in `internal/web/static/`.
