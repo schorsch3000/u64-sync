@@ -29,6 +29,16 @@ jobs:
             GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go vet ./... && GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build -o /dev/null ./cmd/u64-sync
           done
 
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test ./...
+
   docker:
     runs-on: ubuntu-latest
     steps:

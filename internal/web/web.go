@@ -331,7 +331,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	f, err := os.Open(p)
+	f, err := mirror.OpenShared(p)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -393,7 +393,7 @@ func (s *Server) zip(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		f, err := os.Open(p)
+		f, err := mirror.OpenShared(p)
 		if err != nil {
 			return nil
 		}

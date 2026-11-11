@@ -163,7 +163,7 @@ func (v *Verifier) hash(ctx context.Context, lim *rate.Limiter, f store.File) (s
 	if err != nil {
 		return "", 0, err
 	}
-	fh, err := os.Open(p)
+	fh, err := mirror.OpenShared(p)
 	if err != nil {
 		return "", 0, err
 	}

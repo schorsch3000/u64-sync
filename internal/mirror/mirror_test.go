@@ -1,6 +1,7 @@
 package mirror
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,7 +10,7 @@ import (
 
 func TestPathRejectsTraversal(t *testing.T) {
 	m := &Mirror{Current: "/x/current"}
-	if p, err := m.Path("/SD", "a/b.prg"); err != nil || p != "/x/current/SD/a/b.prg" {
+	if p, err := m.Path("/SD", "a/b.prg"); err != nil || p != filepath.Join("/x/current", "SD", "a", "b.prg") {
 		t.Fatalf("%q %v", p, err)
 	}
 	for _, rel := range []string{"../etc", "a/../../b", "", "a//b", "a/./b"} {
@@ -69,5 +70,37 @@ func TestEscapeWindows(t *testing.T) {
 		if got := escapeWindows(in); got != want {
 			t.Errorf("escapeWindows(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// The copier must be able to replace a file that a download, zip or verify
+// pass currently has open (needs FILE_SHARE_DELETE on Windows). The reader keeps
+// seeing the old content, the target gets the new one.
+func TestInstallWhileFileOpen(t *testing.T) {
+	d := t.TempDir()
+	m := &Mirror{Current: filepath.Join(d, "cur"), Tmp: filepath.Join(d, "tmp")}
+	os.MkdirAll(m.Tmp, 0o755)
+	target, _ := m.Path("/SD", "f.prg")
+	install := func(s string) error {
+		f, _ := m.NewTemp()
+		f.WriteString(s)
+		return m.Install(f, target, time.Unix(1000, 0))
+	}
+	if err := install("old"); err != nil {
+		t.Fatal(err)
+	}
+	r, err := OpenShared(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	if err := install("new"); err != nil {
+		t.Fatalf("replace while open: %v", err)
+	}
+	if b, _ := io.ReadAll(r); string(b) != "old" {
+		t.Fatalf("open reader saw %q", b)
+	}
+	if b, _ := os.ReadFile(target); string(b) != "new" {
+		t.Fatalf("target has %q", b)
 	}
 }
