@@ -4,6 +4,7 @@ package device
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -70,20 +71,38 @@ func (m *Monitor) WaitUp(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (m *Monitor) get(ctx context.Context, path string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+m.host+path, nil)
+// GetJSON fetches a REST path and fails on any status other than 200.
+func (m *Monitor) GetJSON(ctx context.Context, path string) ([]byte, error) {
+	status, b, err := m.do(ctx, path)
 	if err != nil {
 		return nil, err
+	}
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("GET %s: HTTP %d", path, status)
+	}
+	return b, nil
+}
+
+func (m *Monitor) get(ctx context.Context, path string) ([]byte, error) {
+	_, b, err := m.do(ctx, path)
+	return b, err
+}
+
+func (m *Monitor) do(ctx context.Context, path string) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+m.host+path, nil)
+	if err != nil {
+		return 0, nil, err
 	}
 	if m.password != "" {
 		req.Header.Set("X-Password", m.password)
 	}
 	resp, err := m.client.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer resp.Body.Close()
-	return io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	return resp.StatusCode, b, err
 }
 
 func (m *Monitor) check(ctx context.Context) {

@@ -18,6 +18,7 @@ import (
 	"github.com/schorsch3000/u64-sync/internal/config"
 	"github.com/schorsch3000/u64-sync/internal/copier"
 	"github.com/schorsch3000/u64-sync/internal/crawler"
+	"github.com/schorsch3000/u64-sync/internal/devconfig"
 	"github.com/schorsch3000/u64-sync/internal/device"
 	"github.com/schorsch3000/u64-sync/internal/mirror"
 	"github.com/schorsch3000/u64-sync/internal/snapshot"
@@ -114,6 +115,7 @@ func run(cfgFile string) error {
 	cr := crawler.New(cfg, st, dev, th, mir, cp.Wake)
 
 	sn := snapshot.New(cfg, st, mir)
+	dc := devconfig.New(cfg.DeviceConfig, dev, mir, th)
 	vf := verify.New(cfg.Verify, st, mir, cp.Wake)
 
 	var wg sync.WaitGroup
@@ -123,13 +125,14 @@ func run(cfgFile string) error {
 		func() { cp.Run(ctx) },
 		func() { sn.Run(ctx) },
 		func() { vf.Run(ctx) },
+		func() { dc.Run(ctx) },
 	} {
 		wg.Add(1)
 		go func() { defer wg.Done(); f() }()
 	}
 
 	handler, err := (&web.Server{Store: st, Device: dev, Crawler: cr, Copier: cp, Snapshots: sn,
-		Throttle: th, Mirror: mir, Verifier: vf, Roots: cfg.Device.Roots,
+		Throttle: th, Mirror: mir, Verifier: vf, DevConfig: dc, Roots: cfg.Device.Roots,
 		User: cfg.Web.User, Password: cfg.Web.Password}).Handler()
 	if err != nil {
 		return err

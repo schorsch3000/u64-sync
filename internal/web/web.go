@@ -22,6 +22,7 @@ import (
 
 	"github.com/schorsch3000/u64-sync/internal/copier"
 	"github.com/schorsch3000/u64-sync/internal/crawler"
+	"github.com/schorsch3000/u64-sync/internal/devconfig"
 	"github.com/schorsch3000/u64-sync/internal/device"
 	"github.com/schorsch3000/u64-sync/internal/meter"
 	"github.com/schorsch3000/u64-sync/internal/mirror"
@@ -47,6 +48,7 @@ type Server struct {
 	Throttle  *throttle.Throttle
 	Mirror    *mirror.Mirror
 	Verifier  *verify.Verifier
+	DevConfig *devconfig.Syncer
 	Roots     []string
 
 	// Basic auth is enforced when Password is not empty. /healthz is always open.
@@ -62,18 +64,19 @@ type throttleView struct {
 }
 
 type status struct {
-	Time       time.Time       `json:"time"`
-	Device     device.State    `json:"device"`
-	Roots      []string        `json:"roots"`
-	Crawler    crawler.Status  `json:"crawler"`
-	Copier     copier.Status   `json:"copier"`
-	Counts     store.Counts    `json:"counts"`
-	Snapshots  snapshot.Status `json:"snapshots"`
-	Verify     verify.Status   `json:"verify"`
-	Throttle   throttleView    `json:"throttle"`
-	CompleteAt string          `json:"last_complete_sync,omitempty"`
-	CrawlOKAt  string          `json:"last_complete_crawl,omitempty"`
-	Problems   []store.Problem `json:"-"`
+	Time       time.Time        `json:"time"`
+	Device     device.State     `json:"device"`
+	Roots      []string         `json:"roots"`
+	Crawler    crawler.Status   `json:"crawler"`
+	Copier     copier.Status    `json:"copier"`
+	Counts     store.Counts     `json:"counts"`
+	Snapshots  snapshot.Status  `json:"snapshots"`
+	Verify     verify.Status    `json:"verify"`
+	DevConfig  devconfig.Status `json:"device_config"`
+	Throttle   throttleView     `json:"throttle"`
+	CompleteAt string           `json:"last_complete_sync,omitempty"`
+	CrawlOKAt  string           `json:"last_complete_crawl,omitempty"`
+	Problems   []store.Problem  `json:"-"`
 }
 
 func (s *Server) status() status {
@@ -82,7 +85,7 @@ func (s *Server) status() status {
 	pr, _ := s.Store.Problems(15)
 	return status{
 		Time: time.Now(), Device: s.Device.State(), Roots: s.Roots,
-		Crawler: s.Crawler.Status(), Copier: s.Copier.Status(), Counts: c, Snapshots: s.Snapshots.Status(), Verify: s.Verifier.Status(),
+		Crawler: s.Crawler.Status(), Copier: s.Copier.Status(), Counts: c, Snapshots: s.Snapshots.Status(), Verify: s.Verifier.Status(), DevConfig: s.DevConfig.Status(),
 		Throttle:   throttleView{bps / 1024, int(delay / time.Millisecond), s.Throttle.Paused()},
 		CompleteAt: s.Store.GetKV("complete_at"), CrawlOKAt: s.Store.GetKV("crawl_ok_at"),
 		Problems: pr,

@@ -67,6 +67,11 @@ func (m *Mirror) CleanTemp() {
 // over target, fsync directory. The target is replaced by a new inode, never
 // modified in place, so hardlinked snapshots keep the old content.
 func (m *Mirror) Install(tmp *os.File, target string, mtime time.Time) error {
+	return m.InstallMode(tmp, target, mtime, 0o644)
+}
+
+// InstallMode is Install with an explicit file mode (set before the file becomes visible).
+func (m *Mirror) InstallMode(tmp *os.File, target string, mtime time.Time, mode os.FileMode) error {
 	name := tmp.Name()
 	fail := func(err error) error {
 		tmp.Close()
@@ -79,7 +84,7 @@ func (m *Mirror) Install(tmp *os.File, target string, mtime time.Time) error {
 	if err := tmp.Close(); err != nil {
 		return fail(err)
 	}
-	if err := os.Chmod(name, 0o644); err != nil {
+	if err := os.Chmod(name, mode); err != nil {
 		return fail(err)
 	}
 	if err := os.Chtimes(name, mtime, mtime); err != nil {

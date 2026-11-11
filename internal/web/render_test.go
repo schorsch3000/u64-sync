@@ -18,6 +18,7 @@ import (
 	"github.com/schorsch3000/u64-sync/internal/config"
 	"github.com/schorsch3000/u64-sync/internal/copier"
 	"github.com/schorsch3000/u64-sync/internal/crawler"
+	"github.com/schorsch3000/u64-sync/internal/devconfig"
 	"github.com/schorsch3000/u64-sync/internal/device"
 	"github.com/schorsch3000/u64-sync/internal/meter"
 	"github.com/schorsch3000/u64-sync/internal/mirror"
@@ -53,7 +54,7 @@ func newServer(t *testing.T) (*Server, *store.Store, *mirror.Mirror) {
 	cp := copier.New(cfg, st, dev, th, mir)
 	s := &Server{
 		Store: st, Device: dev, Crawler: crawler.New(cfg, st, dev, th, mir, cp.Wake), Copier: cp,
-		Snapshots: snapshot.New(cfg, st, mir), Throttle: th, Mirror: mir, Verifier: verify.New(cfg.Verify, st, mir, cp.Wake),
+		Snapshots: snapshot.New(cfg, st, mir), Throttle: th, Mirror: mir, Verifier: verify.New(cfg.Verify, st, mir, cp.Wake), DevConfig: devconfig.New(cfg.DeviceConfig, dev, mir, th),
 		Roots: []string{"/SD", "/Flash"},
 	}
 	if err := s.load(); err != nil {
@@ -217,5 +218,23 @@ func TestInstanceHeaderMatchesPage(t *testing.T) {
 	}
 	if !strings.Contains(page, `content="`+hdr.Get("X-Instance")+`"`) {
 		t.Fatal("page does not embed the instance that /healthz reports")
+	}
+}
+
+func TestDeviceConfigLineOnDashboard(t *testing.T) {
+	s, _, mir := newServer(t)
+	render := func() string {
+		w := httptest.NewRecorder()
+		s.render(w, "index", "status", s.status())
+		return w.Body.String()
+	}
+	if strings.Contains(render(), "<dt>Config</dt>") {
+		t.Fatal("config line shown although the option is off")
+	}
+	cfg := config.Default()
+	cfg.DeviceConfig.Enabled = true
+	s.DevConfig = devconfig.New(cfg.DeviceConfig, s.Device, mir, s.Throttle)
+	if b := render(); !strings.Contains(b, "<dt>Config</dt>") || !strings.Contains(b, "not read yet") {
+		t.Fatalf("enabled but unread state missing:\n%s", b)
 	}
 }

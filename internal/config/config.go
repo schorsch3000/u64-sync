@@ -13,13 +13,14 @@ import (
 )
 
 type Config struct {
-	Device    Device    `yaml:"device"`
-	Storage   Storage   `yaml:"storage"`
-	Sync      Sync      `yaml:"sync"`
-	Throttle  Throttle  `yaml:"throttle"`
-	Snapshots Snapshots `yaml:"snapshots"`
-	Verify    Verify    `yaml:"verify"`
-	Web       Web       `yaml:"web"`
+	Device       Device       `yaml:"device"`
+	Storage      Storage      `yaml:"storage"`
+	Sync         Sync         `yaml:"sync"`
+	Throttle     Throttle     `yaml:"throttle"`
+	Snapshots    Snapshots    `yaml:"snapshots"`
+	Verify       Verify       `yaml:"verify"`
+	DeviceConfig DeviceConfig `yaml:"device_config"`
+	Web          Web          `yaml:"web"`
 }
 
 type Device struct {
@@ -65,6 +66,15 @@ type Snapshots struct {
 	} `yaml:"keep"`
 }
 
+// DeviceConfig saves the device's own configuration (REST API) as a JSON file in the
+// root of the local mirror. It can contain secrets (network and WiFi passwords), so the
+// file is readable by its owner only and the option is off by default.
+type DeviceConfig struct {
+	Enabled  bool          `yaml:"enabled"`
+	File     string        `yaml:"file"`     // file name inside current_dir
+	Interval time.Duration `yaml:"interval"` // how often to read it
+}
+
 // Verify re-hashes local files against the stored sha256 to catch bit rot on the backup disk.
 type Verify struct {
 	Enabled        bool          `yaml:"enabled"`
@@ -95,6 +105,8 @@ func Default() Config {
 	c.Snapshots.Enabled = true
 	c.Snapshots.Interval = 24 * time.Hour
 	c.Snapshots.Keep.Last = 1
+	c.DeviceConfig.File = "u64-config.json"
+	c.DeviceConfig.Interval = time.Hour
 	c.Verify.Enabled = true
 	c.Verify.Interval = 30 * 24 * time.Hour
 	c.Verify.BytesPerSecond = 20 << 20
@@ -141,6 +153,9 @@ func Load(file string) (Config, error) {
 	return c, c.finish()
 }
 
+// Validate fills derived defaults and checks a configuration built in code (tests, tools).
+func Validate(c Config) (Config, error) { return c, c.finish() }
+
 func (c *Config) finish() error {
 	if c.Device.Host == "" {
 		return fmt.Errorf("device.host is required (set it in config.yaml next to where you run the binary, pass -config <file>, or set U64_HOST)")
@@ -165,6 +180,19 @@ func (c *Config) finish() error {
 	}
 	if c.Verify.Enabled && c.Verify.Interval < time.Hour {
 		return fmt.Errorf("verify.interval must be at least 1h")
+	}
+	if dc := c.DeviceConfig; dc.Enabled {
+		if dc.File == "" || dc.File != filepath.Base(dc.File) || strings.ContainsAny(dc.File, `/\:`) || dc.File == "." || dc.File == ".." {
+			return fmt.Errorf("device_config.file must be a plain file name, got %q", dc.File)
+		}
+		for _, r := range c.Device.Roots {
+			if strings.EqualFold(strings.TrimPrefix(r, "/"), dc.File) {
+				return fmt.Errorf("device_config.file %q collides with sync root %s", dc.File, r)
+			}
+		}
+		if dc.Interval < time.Minute {
+			return fmt.Errorf("device_config.interval must be at least 1m")
+		}
 	}
 	if c.Sync.CrawlInterval < time.Minute {
 		return fmt.Errorf("sync.crawl_interval must be at least 1m")
