@@ -158,6 +158,13 @@ func (s *Server) Handler() (http.Handler, error) {
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 
+	// Browsers ask for /favicon.ico regardless of the <link>; answer with the same SVG.
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		b, _ := fs.ReadFile(static, "favicon.svg")
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write(b)
+	})
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) { s.render(w, "index", "", s.status()) })
 	mux.HandleFunc("GET /ui/status", func(w http.ResponseWriter, r *http.Request) { s.render(w, "index", "status", s.status()) })
 
