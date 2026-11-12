@@ -31,7 +31,7 @@
   function schedule(ms) {
     clearTimeout(timer);
     if (reloading) return;
-    timer = setTimeout(check, ms !== undefined ? ms : offline ? Math.min(1500 + attempts * 250, 5000) : 3000);
+    timer = setTimeout(check, ms !== undefined ? ms : offline ? Math.min(1500 + attempts * 250, 5000) : document.hidden ? 30000 : 3000);
   }
 
   function check() {

@@ -5,6 +5,16 @@
     var p = a.pathname, here = location.pathname;
     if (p === here || (p !== '/' && here.indexOf(p) === 0)) a.setAttribute('aria-current', 'page');
   });
+  // a status poll that returns the same markup as last time needs no DOM swap: a tab that
+  // stays open for days then does not rebuild (and garbage-collect) the dashboard needlessly
+  var last = new WeakMap();
+  document.addEventListener('htmx:beforeSwap', function (e) {
+    var t = e.detail.target, xhr = e.detail.xhr;
+    if (!t || !xhr || t.id !== 'status') return;
+    // an action (POST) swaps its answer in, so that becomes the reference too
+    if (e.detail.requestConfig.verb === 'get' && last.get(t) === xhr.responseText) e.detail.shouldSwap = false;
+    else last.set(t, xhr.responseText);
+  });
   // live filter for file listings
   var f = document.getElementById('filter');
   if (f) {
