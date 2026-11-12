@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -112,7 +111,8 @@ func TestPagesRender(t *testing.T) {
 		{"/static/app.css", 200, []string{".badge"}},
 		{"/static/app.js", 200, []string{"filter", "theme-panel"}},
 		{"/static/theme.js", 200, []string{`DEFAULT_ACCENT = "jade"`, `DEFAULT_MODE = "auto"`}},
-		{"/static/pico.jade.min.css", 200, []string{"pico-primary-background"}},
+		{"/static/blades.min.css", 200, []string{"pico-primary-background"}},
+		{"/static/accents.css", 200, []string{`data-accent="jade"`}},
 		{"/favicon.ico", 200, []string{"<svg"}},
 		{"/healthz", 200, []string{"ok"}},
 		{"/static/live.js", 200, []string{"/healthz", "X-Instance"}},
@@ -183,9 +183,13 @@ func TestSpeedBlockRenders(t *testing.T) {
 	}
 }
 
-// Every accent offered by the picker must have its stylesheet embedded, and the default must be jade.
-func TestAccentStylesheetsAreEmbedded(t *testing.T) {
+// Every accent offered by the picker must have its rule in accents.css, and the default must be jade.
+func TestAccentsAreStyled(t *testing.T) {
 	js, err := assets.ReadFile("static/theme.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	css, err := assets.ReadFile("static/accents.css")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,13 +201,15 @@ func TestAccentStylesheetsAreEmbedded(t *testing.T) {
 		t.Fatalf("expected Pico's 20 colors, got %d: %v", len(names), names)
 	}
 	for _, n := range names {
-		if _, err := assets.ReadFile("static/pico." + n + ".min.css"); err != nil {
-			t.Errorf("accent %q: %v", n, err)
+		if !strings.Contains(string(css), `[data-accent="`+n+`"]`) {
+			t.Errorf("accent %q has no rule", n)
 		}
 	}
-	files, _ := fs.Glob(assets, "static/pico.*.min.css")
-	if len(files) != len(names) {
-		t.Errorf("%d stylesheets embedded for %d accents", len(files), len(names))
+	if got := strings.Count(string(css), "--pico-primary:"); got != len(names) {
+		t.Errorf("%d accent rules for %d accents", got, len(names))
+	}
+	if !strings.Contains(string(css), ":root:not([data-accent])") {
+		t.Error("no default accent for pages without JavaScript")
 	}
 }
 

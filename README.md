@@ -52,4 +52,4 @@ Tests run against an in-process fake Ultimate64 (`internal/fakeftp`), no device 
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Bundled Pico.css and htmx (both MIT) keep their licenses in `internal/web/static/`.
+MIT, see [LICENSE](LICENSE). Bundled Blades CSS (a Pico CSS fork) and htmx (both MIT) keep their licenses in `internal/web/static/`.

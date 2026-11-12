@@ -1,4 +1,4 @@
-/* u64-sync UI: small layer on top of Pico.css (the accent color comes from the chosen pico.<color>.min.css). */
+/* U64 Sync UI: small layer on top of Blades CSS (the accent color comes from accents.css, chosen via data-accent). */
 :root { --ok: #1f8a4c; --bad: #c8372d; --warn: #a86b00; --info: #3f5fb0; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) { --ok: #4cc380; --bad: #ff7b72; --warn: #e3b341; --info: #8fa8ff; }

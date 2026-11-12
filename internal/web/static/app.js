@@ -26,7 +26,7 @@
     });
   }
 
-  // theme picker: mode (auto/light/dark) and one of Pico's 20 accent colors
+  // theme picker: mode (auto/light/dark) and one of 20 accent colors (Pico's palette)
   var T = window.u64Theme, box = document.getElementById('theme-panel');
   if (T && box) {
     var modes = [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']];

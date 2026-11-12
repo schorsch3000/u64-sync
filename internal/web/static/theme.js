@@ -1,6 +1,6 @@
 // Applies the saved theme before first paint (loaded synchronously in <head>).
 // mode: "auto" (follow the system), "light" or "dark" -> data-theme on <html>.
-// accent: one of Pico's 20 color themes -> the matching pico.<accent>.min.css.
+// accent: one of Pico's 20 color themes -> data-accent on <html>, styled by accents.css.
 (function () {
   var ACCENTS = [
     ["amber", "#ffbf00"],
@@ -40,7 +40,7 @@
     else document.documentElement.removeAttribute("data-theme");
   }
   applyMode(mode);
-  document.write('<link id="pico-css" rel="stylesheet" href="/static/pico.' + accent + '.min.css">');
+  document.documentElement.setAttribute("data-accent", accent);
 
   window.u64Theme = {
     accents: ACCENTS,
@@ -50,13 +50,7 @@
     setAccent: function (a) {
       if (!known(a)) return;
       accent = a; save("u64.accent", a);
-      // load the new stylesheet first, then drop the old one: no unstyled flash
-      var old = document.getElementById("pico-css");
-      var link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "/static/pico." + a + ".min.css";
-      link.onload = function () { if (old) old.remove(); link.id = "pico-css"; };
-      old.after(link);
+      document.documentElement.setAttribute("data-accent", a);
     }
   };
 })();
